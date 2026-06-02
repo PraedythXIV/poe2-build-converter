@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# build output — the single-file app is published on the GitHub Releases page, not committed
+dist/
+release/
+
+# GGG's official developer docs + local working/design notes — kept local, never published
+Docs/
+
+# reference build exports (poe.ninja / Mobalytics) and generated examples — not committed.
+# The one PoB2 fixture the tests need lives in tests/fixtures/.
+build refs/
+examples/
+
+*.local
+.DS_Store
+
+# never commit secrets (none exist today — preventive)
+.env
+.env.*
+!.env.example

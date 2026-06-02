@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="default">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PoE2 Build Converter — PoB2 → .build</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="app-hd">
+        <div>
+          <h1>PoB2 → <span class="accent">.build</span> converter</h1>
+          <p class="sub">
+            Turn a Path of Building 2 export into a Path of Exile 2 Build Planner
+            <code>.build</code> file. Runs entirely in your browser — nothing is uploaded.
+          </p>
+        </div>
+      </header>
+
+      <main class="grid">
+        <!-- INPUT -->
+        <section class="card" aria-labelledby="in-hd">
+          <div class="card-hd" id="in-hd">Input</div>
+          <div class="card-body">
+            <div class="ix-seg" id="seg" style="--n: 2" role="tablist" aria-label="Input mode">
+              <span class="ix-seg-thumb" style="--i: 0"></span>
+              <button type="button" class="on" data-mode="paste" role="tab" aria-selected="true">Paste code</button>
+              <button type="button" data-mode="upload" role="tab" aria-selected="false">Upload file</button>
+            </div>
+
+            <div id="pane-paste" class="pane">
+              <label class="lbl" for="code">Path of Building 2 export code or XML</label>
+              <textarea
+                id="code"
+                class="ta"
+                spellcheck="false"
+                placeholder="Paste the PoB2 export code here (or the decoded XML)…"
+              ></textarea>
+            </div>
+
+            <div id="pane-upload" class="pane" hidden>
+              <input type="file" id="file" accept=".xml,.txt,.build" hidden />
+              <button type="button" class="dz-zone" id="dz" aria-label="Choose or drop a build file">
+                <span class="dz-zone-ic"></span>
+                <span class="dz-zone-txt" id="dz-txt">Drop a .xml / code file, or click to choose</span>
+              </button>
+            </div>
+
+            <label class="lbl" for="name">Build name <span class="muted">(optional)</span></label>
+            <input id="name" class="inp" type="text" placeholder="Defaults to class + level" />
+
+            <div class="row">
+              <button type="button" class="ix-btn ix-btn--primary" id="convert">Convert</button>
+              <button type="button" class="ix-btn ix-btn--ghost" id="clear">Clear</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- OUTPUT -->
+        <section class="card" aria-labelledby="out-hd">
+          <div class="card-hd" id="out-hd">
+            Output
+            <span class="fb-pill" data-state="idle" id="status">
+              <span class="fb-pill-glyph"></span><span id="status-txt">Idle</span>
+            </span>
+          </div>
+          <div class="card-body">
+            <div id="stats" class="stats" hidden></div>
+            <div id="warnings" class="warnings" aria-live="polite"></div>
+
+            <div class="json-wrap">
+              <div class="json-bar">
+                <span id="json-name">build.json</span>
+                <span class="muted" id="json-size"></span>
+              </div>
+              <pre class="json-out" id="json"><span class="muted">Converted .build JSON will appear here.</span></pre>
+            </div>
+
+            <div class="row">
+              <button type="button" class="ix-btn ix-btn--primary" id="download" disabled>Download .build</button>
+              <button type="button" class="ix-btn" id="copy" disabled>Copy JSON</button>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="app-ft">
+        <details>
+          <summary>Where does the <code>.build</code> file go?</summary>
+          <p>
+            Drop it into your Build Planner folder, then it loads in-game automatically:
+          </p>
+          <ul>
+            <li><b>Windows:</b> <code>Documents\My Games\Path of Exile 2\BuildPlanner</code></li>
+            <li>
+              <b>Steam Deck:</b>
+              <code>…/steamapps/compatdata/2315204395/pfx/…/Documents/My Games/Path of Exile 2/BuildPlanner</code>
+            </li>
+          </ul>
+        </details>
+        <p class="fine" id="provenance"></p>
+        <p class="fine">This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

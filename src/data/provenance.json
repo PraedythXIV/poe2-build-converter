@@ -1,0 +1,15 @@
+{
+  "captured": "2026-06-02",
+  "sources": {
+    "tree": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json",
+    "gems": "https://repoe-fork.github.io/poe2/skill_gems.json",
+    "uniques": "https://repoe-fork.github.io/poe2/uniques.json"
+  },
+  "counts": {
+    "passiveNodes": 4844,
+    "ascendancies": 25,
+    "gems": 1186,
+    "uniques": 441
+  },
+  "note": "This product isn't affiliated with or endorsed by Grinding Gear Games in any way."
+}

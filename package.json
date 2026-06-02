@@ -1,0 +1,29 @@
+{
+  "name": "poe2-build-converter",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline converter: Path of Building 2 export -> PoE2 .build (Build Planner) file. Not affiliated with or endorsed by Grinding Gear Games.",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "postbuild": "node scripts/release.mjs",
+    "preview": "vite preview",
+    "fetch-data": "node scripts/fetch-data.mjs",
+    "emit-sample": "vite-node scripts/emit-sample.mts",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/pako": "^2.0.3",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.1.0",
+    "vitest": "^2.1.0"
+  }
+}

@@ -1,7 +1,7 @@
-# PoE2 Build Converter — PoB2 code → `.build`
+# PoE2 Build Converter — PoB2 import code → `.build`
 
 A **completely offline** tool that converts a **Path of Building 2** export into a Path of Exile 2
-**Build Planner** (`.build`) file you can import in-game. Paste a PoB2 code (or upload the decoded
+**Build Planner** (`.build`) file you can import in-game. Paste a PoB2 import code (or upload the decoded
 XML), get a spec-correct `.build` you drop into your game folder.
 
 It does what poe.ninja's beta export does **plus items** — uniques become `unique_name`, rares/magic

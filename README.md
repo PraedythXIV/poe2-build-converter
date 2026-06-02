@@ -1,4 +1,4 @@
-# PoE2 Build Converter — PoB2 → `.build`
+# PoE2 Build Converter — PoB2 code → `.build`
 
 A **completely offline** tool that converts a **Path of Building 2** export into a Path of Exile 2
 **Build Planner** (`.build`) file you can import in-game. Paste a PoB2 code (or upload the decoded

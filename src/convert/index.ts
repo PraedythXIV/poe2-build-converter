@@ -7,9 +7,12 @@ import { mapPassives } from './mapPassives'
 import { mapSkills } from './mapSkills'
 import { mapItems } from './mapItems'
 import { assembleBuild, serialize, validateBuild } from './emit'
+import { ascendancyInfo } from './lookups'
 
 export { DecodeError, ParseError }
 export type { ConvertResult, Warning } from './types'
+export { summarize, summarizeSafe } from './summarize'
+export type { BuildSummary, SummaryItem, SummarySkill } from './summarize'
 
 export interface ConvertOptions {
   /** Override the generated build name. */
@@ -42,7 +45,7 @@ export function convert(input: string, opts: ConvertOptions = {}): ConvertResult
   const ascId = pob.spec.ascendancyInternalId
   const stats: ConvertStats = {
     className: pob.className,
-    ascendancy: ascId,
+    ascendancy: (ascId && ascendancyInfo(ascId)?.name) || pob.ascendClassName || null,
     level: pob.level,
     passiveCount: passives.length,
     passivesSkipped,

@@ -9,6 +9,9 @@ import provenanceData from '../data/provenance.json'
 // Cast away the giant literal types that resolveJsonModule would otherwise infer
 // (keeps tsc fast and the call sites clean).
 const PASSIVE_NODES = (passivesData as { nodes: Record<string, string> }).nodes
+const NODE_META = (passivesData as {
+  nodeMeta?: Record<string, { name: string; kind: string; asc?: number }>
+}).nodeMeta ?? {}
 const ASCENDANCIES = (passivesData as {
   ascendancies: Record<string, { name: string; class: string }>
 }).ascendancies
@@ -24,6 +27,12 @@ export const provenance = provenanceData as {
 /** Numeric passive node id -> PassiveSkills `.build` id string (e.g. "35426" -> "strength89"). */
 export function passiveIdForNode(numericNodeId: string): string | undefined {
   return PASSIVE_NODES[numericNodeId]
+}
+
+/** Readable name + kind (keystone/notable/mastery, asc=1 for ascendancy) for a NAMED node;
+ *  undefined for ordinary small nodes (which the vendored data deliberately leaves unnamed). */
+export function passiveMeta(numericNodeId: string): { name: string; kind: string; asc?: number } | undefined {
+  return NODE_META[numericNodeId]
 }
 
 export function ascendancyInfo(id: string): { name: string; class: string } | undefined {

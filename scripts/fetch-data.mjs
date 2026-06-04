@@ -45,13 +45,20 @@ async function main() {
   console.log('Fetching GGG passive tree...')
   const tree = await getJson(SOURCES.tree)
   const nodes = tree.nodes || {}
-  /** @type {Record<string,string>} */
+  /** @type {Record<string,string>} numeric node id -> .build PassiveSkills id string (all nodes) */
   const passiveNodes = {}
+  /** @type {Record<string,{name:string,kind:string,asc?:number}>} readable name + kind for NAMED nodes
+   *  only (keystone/notable/mastery) so the preview can label perks; small nodes stay id-only. */
+  const nodeMeta = {}
   let withId = 0
   for (const [numId, node] of Object.entries(nodes)) {
     if (node && typeof node.id === 'string' && node.id.length) {
       passiveNodes[numId] = node.id
       withId++
+      const kind = node.isKeystone ? 'keystone' : node.isNotable ? 'notable' : node.isMastery ? 'mastery' : null
+      if (kind && typeof node.name === 'string' && node.name) {
+        nodeMeta[numId] = node.ascendancyId ? { name: node.name, kind, asc: 1 } : { name: node.name, kind }
+      }
     }
   }
   // ascendancy id -> { name, class } from classes[].ascendancies
@@ -62,6 +69,13 @@ async function main() {
       if (asc && asc.id) ascendancies[asc.id] = { name: asc.name ?? '', class: cls.name ?? '' }
     }
   }
+  // Invariant: every named node MUST also have a `.build` id in `nodes` — otherwise the preview could
+  // mark a perk "● part of the build" that the converter can't actually emit. Fail the vendor run fast.
+  const orphans = Object.keys(nodeMeta).filter((id) => !(id in passiveNodes))
+  if (orphans.length) {
+    throw new Error(`nodeMeta has ${orphans.length} node(s) absent from nodes[] (e.g. ${orphans.slice(0, 5).join(', ')})`)
+  }
+
   const passivesOut = {
     _provenance: {
       source: SOURCES.tree,
@@ -70,6 +84,7 @@ async function main() {
       nodeCount: withId,
     },
     nodes: passiveNodes,
+    nodeMeta,
     ascendancies,
   }
 

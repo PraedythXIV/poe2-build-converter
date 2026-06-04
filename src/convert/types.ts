@@ -61,6 +61,8 @@ export interface PobItem {
   mods: string[]
   /** Level requirement to use the item (from PoB's "LevelReq:" line); 1 if none. */
   levelReq: number
+  /** Socketed rune / soul-core names (PoB's "Rune: <name>" lines), e.g. "Soul Core of Citaqualotl". */
+  runes: string[]
   /** Raw item text as PoB stored it, for fallback. */
   raw: string
 }
@@ -76,6 +78,8 @@ export interface PobBuild {
   className: string | null
   ascendClassName: string | null
   level: number | null
+  /** 1-based index into `skillGroups` of the build's main socket group (PoB `<Build mainSocketGroup>`). */
+  mainSocketGroup: number | null
   spec: PobSpec
   skillGroups: PobSkillGroup[]
   items: Map<string, PobItem>

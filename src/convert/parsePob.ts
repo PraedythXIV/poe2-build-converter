@@ -36,9 +36,14 @@ function isItemHeaderLine(line: string): boolean {
   return ITEM_LABEL_RE.test(line) || ITEM_FLAG_RE.test(line)
 }
 
-/** Strip leading {tag}{tag} mod prefixes PoB stores (e.g. "{crafted}{rune}+5..."). */
+/** Strip leading {tag}{tag} mod prefixes PoB stores (e.g. "{crafted}{rune}+5...").
+ *  A {rune} prefix is kept as a trailing "(rune)" flag so the guidance text (and the preview) show
+ *  which stat a socketed rune / soul core grants — the .build format has no rune field of its own. */
 function stripModPrefix(line: string): string {
-  return line.replace(/^(\{[^}]*\})+/, '').trim()
+  const m = line.match(/^(\{[^}]*\})+/)
+  if (!m) return line.trim()
+  const rest = line.slice(m[0].length).trim()
+  return /\{rune\}/i.test(m[0]) ? `${rest} (rune)` : rest
 }
 
 function parseItemText(id: string, raw: string): PobItem {
@@ -61,6 +66,14 @@ function parseItemText(id: string, raw: string): PobItem {
       levelReq = Number(m[1])
       break
     }
+  }
+
+  // socketed rune / soul-core names — PoB writes one "Rune: <name>" line per socketed rune
+  // (soul cores are named "Soul Core of …" but still use the "Rune:" label).
+  const runes: string[] = []
+  for (const l of lines) {
+    const rm = l.match(/^(?:Rune|Soul Core):\s*(.+)$/i)
+    if (rm) runes.push(rm[1]!.trim())
   }
 
   let cursor = 0
@@ -91,10 +104,15 @@ function parseItemText(id: string, raw: string): PobItem {
       implicitsLeft = Number(implicitMatch[1])
       continue
     }
-    // consume exactly the counted implicit lines FIRST, regardless of how they look — an implicit
-    // such as "Grants Skill: …" must still decrement the counter, not be skipped as a header.
+    // consume the counted implicit lines, but KEEP rune/soul-core implicits (PoE2 lists a socketed
+    // rune's stat as an implicit) so the guidance text + preview can flag which stat the rune grants;
+    // ordinary base/enchant implicits are still dropped.
     if (implicitsLeft > 0) {
       implicitsLeft--
+      if (/\{rune\}/i.test(line)) {
+        const mod = stripModPrefix(line)
+        if (mod) mods.push(mod)
+      }
       continue
     }
     if (isItemHeaderLine(line)) continue
@@ -102,7 +120,7 @@ function parseItemText(id: string, raw: string): PobItem {
     if (mod) mods.push(mod)
   }
 
-  return { id, rarity, name, baseType, mods, levelReq, raw }
+  return { id, rarity, name, baseType, mods, levelReq, runes, raw }
 }
 
 // ── main parse ───────────────────────────────────────────────────────────────
@@ -124,6 +142,7 @@ export function parsePob(xml: string): PobBuild {
   const className = buildEl?.getAttribute('className') ?? null
   const ascendClassName = buildEl?.getAttribute('ascendClassName') ?? null
   const level = num(buildEl?.getAttribute('level') ?? null)
+  const mainSocketGroup = num(buildEl?.getAttribute('mainSocketGroup') ?? null)
 
   // ── passive spec (active one) ──
   const treeEl = firstChildByTag(root, 'Tree')
@@ -204,5 +223,5 @@ export function parsePob(xml: string): PobBuild {
     }
   }
 
-  return { className, ascendClassName, level, spec, skillGroups, items, slots }
+  return { className, ascendClassName, level, mainSocketGroup, spec, skillGroups, items, slots }
 }

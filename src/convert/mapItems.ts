@@ -53,6 +53,7 @@ function rareGuidance(item: PobItem): string {
     '',
     shownMods.length ? color('grey', shownMods.join('\n')) : '',
     more ? color('grey', more) : '',
+    item.runes.length ? color('grey', `Runes: ${item.runes.join(', ')}`) : '',
   )
 }
 
@@ -92,7 +93,11 @@ export function mapItems(pob: PobBuild, warnings: Warning[]): MappedItems {
       const canon = canonicalUnique(item.name)
       entry.unique_name = canon ?? item.name
       if (!canon) uncanonicalUniques.push(item.name)
-      if (item.baseType) entry.additional_text = color('unique', item.name) + '\n' + color('grey', item.baseType)
+      // unique loads from its name; note base + any socketed runes (runes don't transfer with it)
+      const uparts = [color('unique', item.name)]
+      if (item.baseType) uparts.push(color('grey', item.baseType))
+      if (item.runes.length) uparts.push(color('grey', `Runes: ${item.runes.join(', ')}`))
+      if (uparts.length > 1) entry.additional_text = uparts.join('\n')
     } else {
       entry.additional_text = rareGuidance(item)
     }

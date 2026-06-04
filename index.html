@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="default">
+<html lang="en" data-theme="poe2">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7,29 +7,85 @@
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
+    <!-- marble shader wallpaper (red), behind everything, non-interactive, toggle-able -->
+    <canvas id="bg" aria-hidden="true"></canvas>
     <div class="wrap">
-      <header class="app-hd">
-        <div>
-          <h1>PoB2 import code → <span class="accent">.build</span> converter</h1>
-          <p class="sub">
-            Turn a Path of Building 2 export into a Path of Exile 2 Build Planner
-            <code>.build</code> file. Runs entirely in your browser — nothing is uploaded.
-          </p>
+      <div class="wrap-main">
+      <h1 class="sr-only">PoE2 Build Converter — Path of Building 2 import code to .build file</h1>
+      <header class="hd-bar" role="banner">
+        <a class="hd-brand" href="./" aria-label="PoE2 Build Converter — home">
+          <span class="hd-mark" aria-hidden="true">◈</span>
+          <span class="hd-name">PoE2 Build <b>Converter</b></span>
+        </a>
+        <div class="hd-actions">
+          <button
+            class="hd-iconbtn hd-bg-toggle on"
+            type="button"
+            id="bg-toggle"
+            aria-label="Toggle the animated background"
+            aria-pressed="true"
+            title="Toggle the animated background"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+            </svg>
+          </button>
+          <a
+            class="hd-iconbtn"
+            href="https://github.com/PraedythXIV/poe2-build-converter"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Source on GitHub"
+            title="Source on GitHub"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.39.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85l-.01 2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
+            </svg>
+          </a>
         </div>
       </header>
+      <p class="app-tagline">
+        Turn a Path of Building 2 export into a Path of Exile 2 Build Planner
+        <code>.build</code> file you can import in-game.
+      </p>
 
-      <main class="grid">
+      <main>
+        <!-- conversion flow: state driven by renderStepper() in main.ts -->
+        <div class="sx" id="stepper" style="--n: 4">
+          <nav aria-label="Conversion progress">
+            <ol class="sx-steps">
+              <li class="sx-step" data-state="current" aria-current="step" style="--i: 0">
+                <span class="sx-node" aria-hidden="true"><span class="sx-num">1</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
+                <span class="sx-label">Import</span><span class="sx-sub">Paste or upload</span>
+              </li>
+              <li class="sx-step" data-state="upcoming" style="--i: 1">
+                <span class="sx-node" aria-hidden="true"><span class="sx-num">2</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
+                <span class="sx-label">Preview</span><span class="sx-sub">Build contents</span>
+              </li>
+              <li class="sx-step" data-state="upcoming" style="--i: 2">
+                <span class="sx-node" aria-hidden="true"><span class="sx-num">3</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
+                <span class="sx-label">Convert</span><span class="sx-sub">Build the .build</span>
+              </li>
+              <li class="sx-step" data-state="upcoming" style="--i: 3">
+                <span class="sx-node" aria-hidden="true"><span class="sx-num">4</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
+                <span class="sx-label">Download</span><span class="sx-sub">Save the file</span>
+              </li>
+            </ol>
+          </nav>
+        </div>
+
+        <div class="grid">
         <!-- INPUT -->
         <section class="card" aria-labelledby="in-hd">
           <div class="card-hd" id="in-hd">Input</div>
           <div class="card-body">
             <div class="ix-seg" id="seg" style="--n: 2" role="tablist" aria-label="Input mode">
               <span class="ix-seg-thumb" style="--i: 0"></span>
-              <button type="button" class="on" data-mode="paste" role="tab" aria-selected="true">Paste code</button>
-              <button type="button" data-mode="upload" role="tab" aria-selected="false">Upload file</button>
+              <button type="button" class="on" id="tab-paste" data-mode="paste" role="tab" aria-selected="true" aria-controls="pane-paste">Paste code</button>
+              <button type="button" id="tab-upload" data-mode="upload" role="tab" aria-selected="false" aria-controls="pane-upload">Upload file</button>
             </div>
 
-            <div id="pane-paste" class="pane">
+            <div id="pane-paste" class="pane" role="tabpanel" aria-labelledby="tab-paste">
               <label class="lbl" for="code">Path of Building 2 export code or XML</label>
               <textarea
                 id="code"
@@ -39,7 +95,7 @@
               ></textarea>
             </div>
 
-            <div id="pane-upload" class="pane" hidden>
+            <div id="pane-upload" class="pane" role="tabpanel" aria-labelledby="tab-upload" hidden>
               <input type="file" id="file" accept=".xml,.txt,.build" hidden />
               <button type="button" class="dz-zone" id="dz" aria-label="Choose or drop a build file">
                 <span class="dz-zone-ic"></span>
@@ -61,7 +117,7 @@
         <section class="card" aria-labelledby="out-hd">
           <div class="card-hd" id="out-hd">
             Output
-            <span class="fb-pill" data-state="idle" id="status">
+            <span class="fb-pill" data-state="idle" id="status" role="status">
               <span class="fb-pill-glyph"></span><span id="status-txt">Idle</span>
             </span>
           </div>
@@ -83,24 +139,72 @@
             </div>
           </div>
         </section>
+        </div>
       </main>
 
-      <footer class="app-ft">
-        <details>
-          <summary>Where does the <code>.build</code> file go?</summary>
-          <p>
-            Drop it into your Build Planner folder, then it loads in-game automatically:
+      <!-- BUILD CONTENTS — live preview of what's in the build (before converting) -->
+      <section class="card bc" id="contents" aria-labelledby="bc-hd" hidden>
+        <div class="card-hd" id="bc-hd">Build contents</div>
+        <div class="card-body">
+          <div class="bc-char" id="bc-char"></div>
+          <p class="bc-legend">
+            <span class="bc-tier" aria-hidden="true" title="Saved to the .build">●</span> part of the build (incl. items' guidance-text stats) ·
+            <span class="bc-tier" aria-hidden="true" title="Preview only — not stored in the .build">○</span> preview only
           </p>
-          <ul>
-            <li><b>Windows:</b> <code>Documents\My Games\Path of Exile 2\BuildPlanner</code></li>
-            <li>
-              <b>Steam Deck:</b>
-              <code>…/steamapps/compatdata/2315204395/pfx/…/Documents/My Games/Path of Exile 2/BuildPlanner</code>
-            </li>
-          </ul>
-        </details>
-        <p class="fine" id="provenance"></p>
-        <p class="fine">This product isn't affiliated with or endorsed by Grinding Gear Games in any way.</p>
+          <p class="bc-note">
+            <span class="bc-note-ic" aria-hidden="true">i</span>
+            <span>A PoB import code (e.g. copied from <b>poe.ninja</b>) doesn't always include every item. Anything missing here is also missing in Path of Building — it simply wasn't in the code, so nothing was dropped during conversion. If a piece looks absent, double-check the original build.</span>
+          </p>
+          <div class="bc-gear" id="bc-gear" role="group" aria-label="Equipped gear, laid out like the in-game equipment panel"></div>
+          <div class="bc-grid">
+            <div class="bc-col" id="bc-skills" role="group" aria-label="Skills"></div>
+            <div class="bc-col" id="bc-perks" role="group" aria-label="Perks"></div>
+          </div>
+        </div>
+      </section>
+      </div>
+
+      <footer class="ft" aria-labelledby="ft-h">
+        <h2 id="ft-h" class="sr-only">About this converter</h2>
+        <div class="ft-top">
+          <div class="ft-brand">
+            <span class="ft-logo"><span class="ft-mark" aria-hidden="true">◈</span>PoE2 Build Converter</span>
+            <p class="ft-blurb">
+              Converts a Path of Building export into a Path of Exile 2 Build Planner file — passives,
+              skills, and gear in one pass — so any build you find loads straight into the game.
+            </p>
+          </div>
+          <nav class="ft-col" aria-label="Resources">
+            <h3 class="ft-col-h">Resources</h3>
+            <ul class="ft-links">
+              <li><a class="ft-link" href="https://www.pathofexile.com/developer/docs/game#buildplanner" target="_blank" rel="noopener noreferrer">Build Planner format</a></li>
+              <li><a class="ft-link" href="https://github.com/PraedythXIV/poe2-build-converter" target="_blank" rel="noopener noreferrer">Source <span class="ft-pip">GitHub</span></a></li>
+              <li><a class="ft-link" href="https://github.com/PraedythXIV/poe2-build-converter/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+            </ul>
+          </nav>
+          <nav class="ft-col" aria-label="Tools">
+            <h3 class="ft-col-h">Tools</h3>
+            <ul class="ft-links">
+              <li><a class="ft-link" href="https://pathofbuilding.community/" target="_blank" rel="noopener noreferrer">Path of Building</a></li>
+              <li><a class="ft-link" href="https://poe.ninja/" target="_blank" rel="noopener noreferrer">poe.ninja</a></li>
+              <li><a class="ft-link" href="https://mobalytics.gg/poe-2" target="_blank" rel="noopener noreferrer">Mobalytics</a></li>
+            </ul>
+          </nav>
+          <div class="ft-col">
+            <h3 class="ft-col-h">Where the .build goes</h3>
+            <details class="ft-details">
+              <summary>Build Planner folder</summary>
+              <ul>
+                <li><b>Windows:</b> <code>Documents\My Games\Path of Exile 2\BuildPlanner</code></li>
+                <li><b>Steam Deck:</b> <code>…/steamapps/compatdata/2315204395/pfx/…/Documents/My Games/Path of Exile 2/BuildPlanner</code></li>
+              </ul>
+            </details>
+          </div>
+        </div>
+        <div class="ft-bar">
+          <span class="ft-copy" id="provenance"></span>
+          <span class="ft-disclaimer">Not affiliated with or endorsed by Grinding Gear Games.</span>
+        </div>
       </footer>
     </div>
 

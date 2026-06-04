@@ -1,11 +1,10 @@
 name: Deploy to GitHub Pages
 
-# Builds the single-file app and publishes dist/ to GitHub Pages on every push to main.
+# Builds the single-file app and publishes dist/ to GitHub Pages.
+# MANUAL ONLY — nothing deploys on push; YOU run it from the Actions tab ("Run workflow") when ready.
 # Requires: repo is Public (free Pages) and Settings → Pages → Source = "GitHub Actions".
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

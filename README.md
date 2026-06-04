@@ -47,6 +47,21 @@ bar across the top.
 - **Ambient background.** An animated marble shader sits behind the app; toggle it on/off with the
   flame button in the header (your choice is remembered), and it freezes for `prefers-reduced-motion`.
 
+## Features
+
+- **Whole-build conversion in one pass** — passives, skills (with their supports), and every equipped item.
+- **All your gear** — weapons, armour, rings, amulet, **flasks, charms**, plus weapon-swap sets and tree jewels.
+- **Rich item data** — uniques by name; rares, magic items, base stats, jewels, and rune-granted stats
+  carried as the in-game guidance text the Build Planner displays.
+- **Level-aware items** — every item keeps its level requirement, so in the Build Planner it appears
+  from the level you can actually equip it ((the tooltips for gear (the little blue icon you can hover over) simply won't show in your inventory until you meet the level requirement for each)).
+- **Runes & soul-cores** named, with the stats they grant kept.
+- **Named passives** — keystones, notables, and masteries by their real names, not slugs.
+- **Per-weapon-set passives** — passives are tagged to the weapon set they belong to, so dual-weapon-set
+  builds map across the right sets.
+- **Live preview** — the whole build (gear gallery, skills, perks) shown before you convert.
+- **Self-contained** — one HTML file to open or share; no install, no network.
+
 ## What gets converted
 
 | Build part | Source (PoB2 XML) | `.build` output |
@@ -59,32 +74,35 @@ bar across the top.
 Run `npm run emit-sample` to generate a local `examples/sample.build` from the test fixture — handy
 for eyeballing real output (git-ignored, not committed).
 
-## Limitations (v1)
+## By design
 
-- **Some PoB codes don't include every item.** A code copied from poe.ninja (or made by another tool)
-  can leave items out — if a slot is empty in the preview, it was empty in the code too (so it's also
-  missing in Path of Building), not something the conversion dropped. Cross-check the original build if
-  a piece looks absent.
-- **Meta / ascendancy skill gems** are emitted as-is, mirroring poe.ninja; GGG's spec notes the
-  importer may treat them specially.
-- **Weapon-set passive tagging** is best-effort; verify multi-weapon-set builds in-game.
-- **Jewels** can't be *placed* by the `.build` format, so each socketed jewel is noted as text on its
-  passive node instead.
-- **Weapon-swap and a few exotic slots** have no Build Planner equivalent and are skipped (you'll see
-  a note).
-- **Rare-item mods** round-trip as free guidance text only — the `.build` format has no structured
-  mod fields.
-- **Gem levels/quality** aren't carried — the `.build` format conveys *which* gems, not their levels.
-- Auto-granted skills (from items/tree) and weapon-swap gear are intentionally excluded so the output
-  reflects what you actually socketed/equipped.
-- **Slot ids cross-checked against real poe.ninja + Mobalytics exports (PoE2 0.5):** gear uses
-  `Weapon1`/`Offhand1`/`Helm1`/…, weapon swap uses `Weapon2`/`Offhand2`, flasks are `Flask1` (slot_x
-  0 = life, 1 = mana), charms are `Charm1` (slot_x 0/1/2). Charms 4–6 (a future addition) aren't
-  mapped yet — PoB doesn't export those slots until they exist.
-- **Skill groups** are emitted like poe.ninja: one entry per socket group (first gem = the skill, all
-  other gems become `support_skills`), and tree-/item-granted skills are skipped.
-- The format is **GGG "v1 / experimental"** and may change; treat output as a strong draft and
-  confirm in-game.
+The Build Planner `.build` is a lightweight share format, so several things are carried as **guidance
+text on purpose** — exactly what the in-game importer reads — rather than as structured fields. This is
+intentional, not a shortfall:
+
+- **Rare & magic items, item base stats, and tree jewels** become readable stat-priority guidance text
+  (the format has no structured mod fields, and jewels can't be *placed* — so each is noted on its
+  passive node). Uniques carry through by name.
+- The format records *which* gems you socketed, not their **levels / quality**.
+- **Weapon-swap and a few exotic slots**, and **auto-granted** (item-/tree-) skills, have no Build
+  Planner equivalent and are intentionally left out (you'll see a note), so the output reflects what you
+  actually equipped/socketed.
+- **Meta / ascendancy gems** and **skill groups** are emitted the way poe.ninja does: one entry per
+  socket group, first gem = the skill, the rest become `support_skills`.
+- **Slot ids** were cross-checked against real poe.ninja + Mobalytics exports (PoE2 0.5): gear uses
+  `Weapon1`/`Offhand1`/`Helm1`/…, weapon swap `Weapon2`/`Offhand2`, flasks `Flask1` (`slot_x` 0 = life,
+  1 = mana), charms `Charm1` (`slot_x` 0/1/2). Charms 4–6 aren't mapped yet — PoB doesn't export those
+  slots until they exist.
+
+## Caveats
+
+- **Some PoB codes don't include every item.** A code copied from poe.ninja (or another tool) can leave
+  items out — if a slot is empty in the preview, it was empty in the code too (so it's also missing in
+  Path of Building), not something the conversion dropped. Cross-check the original build if a piece
+  looks absent.
+- **Weapon-set passive tagging** is best-effort — verify multi-weapon-set builds in-game.
+- The format is **GGG "v1 / experimental"** and may change — treat output as a strong draft and confirm
+  in-game.
 
 ## Updating the data (per patch)
 

@@ -110,13 +110,23 @@ Everything is inlined into the single `index.html`; the only data is the vendore
   the mapped passives/ascendancy/skills/items, plus a DOM "click Convert → render" wiring test.
 - `npm run emit-sample` → regenerates a local `examples/sample.build` (git-ignored) for eyeballing.
 
-## Known limitations
+## By design & caveats
 
-- Meta/ascendancy gems are emitted as poe.ninja does (the importer may treat them specially).
-- `weapon_set` tagging and weapon-swap/offhand slot ids are best-effort — confirm unusual builds
-  in-game.
-- Jewels can't be *placed* by the format, so each is noted as text on its passive node.
-- Rare-item mods round-trip as free guidance text (the format has no structured mod fields).
-- `level_interval` upper bound is always the level cap (a single PoB snapshot can't know when an item
-  is replaced); the lower bound is the item's `LevelReq`.
+By design — the `.build` format's intended mechanics (what the in-game importer reads), not shortfalls:
+
+- Rare/magic items, item base stats, and jewels are carried as **guidance text** — the format has no
+  structured mod fields, and jewels can't be *placed*, so each is noted on its passive node. Uniques
+  carry by name.
+- The format records *which* gems are socketed, not their levels/quality.
+- `level_interval` is `[item LevelReq, level cap]` (a snapshot can't know when an item is replaced), so
+  an item shows in-game from the level you can actually equip it.
+- Weapon-swap/exotic slots and auto-granted (item-/tree-) skills have no Build Planner equivalent and
+  are intentionally left out.
+- Meta/ascendancy gems and skill groups are emitted as poe.ninja does (first gem in a group = the
+  skill, the rest become `support_skills`).
+
+Caveats — worth verifying:
+
+- `weapon_set` passive tagging is best-effort — confirm multi-weapon-set builds in-game.
+- Some PoB codes (e.g. copied from poe.ninja) omit items entirely — absent gear was never in the code.
 - The format is GGG "v1 / experimental" and may change.

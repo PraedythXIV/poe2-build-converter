@@ -84,6 +84,24 @@ them two ways: (1) tiny probe `.build` files imported in the live client to see 
 accepts, and (2) cross-checking against real working exports from **poe.ninja** (skills) and
 **Mobalytics** (items). Our output is structurally identical to those references for the same builds.
 
+## The app (UI)
+
+Beyond the engine, the page is a thin UI over the same offline pipeline:
+
+- **Live preview** — on every input change, `summarizeSafe()` runs decode+parse only (no emit) and
+  `renderContents()` paints a **Build contents** panel: character identity, a **gear gallery** of
+  in-game-style item tooltips (the shared UI library's `itc-` card — rarity drives the hue; unequipped
+  canonical slots render as muted pewter placeholders), plus skills and allocated passives. The ●/○
+  markers flag what's saved to the `.build` vs preview-only.
+- **Stepper** — a 4-step Import → Preview → Convert → Download indicator, derived purely from existing
+  state (input present, preview shown, `last` result, error), not a separate state machine.
+- **Marble background** — `src/bg/marble.ts` is a small WebGL wallpaper (ported from the UI library's
+  `#219` shader): fixed, non-interactive, driven by a fixed red `--accent-rgb`, toggle-able (persisted
+  in `localStorage`), and frozen under `prefers-reduced-motion`. It's a shader on a canvas — **entirely
+  client-side**, so the "no network calls" guarantee is intact; the bundle still issues zero requests.
+
+Everything is inlined into the single `index.html`; the only data is the vendored JSON.
+
 ## Build & verify
 
 - `npm run build` → typecheck, bundle to one file (`vite-plugin-singlefile`, `modulePreload` off so

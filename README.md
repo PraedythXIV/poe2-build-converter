@@ -4,17 +4,15 @@ A **completely offline** tool that converts a **Path of Building 2** export into
 **Build Planner** (`.build`) file you can import in-game. Paste a PoB2 import code (or upload the decoded
 XML), get a spec-correct `.build` you drop into your game folder.
 
-It does what poe.ninja's beta export does **plus items** — uniques become `unique_name`, rares/magic
-become readable stat-priority guidance.
+It converts the whole build in one pass — passives, skills, **and items**: uniques become
+`unique_name`, while rares and magic items become readable stat-priority guidance. As you paste, a
+live **Build contents** panel previews the character's gear, skills, and passives *before* you convert.
 
 > This product isn't affiliated with or endorsed by Grinding Gear Games in any way.
 
-## Why "offline"?
-
-Everything runs in your browser with **zero network access** — the built `index.html` is a single
-self-contained file (no server, no backend, no telemetry). The passive/gem/unique lookup tables are
-**vendored into the bundle at build time** (see [Data](#updating-the-data-per-patch)). Your build
-data never leaves your machine.
+**Fully offline.** The built `index.html` is one self-contained file — no server, no backend, no
+network calls. The passive/gem/unique lookup tables are vendored into the bundle at build time, so
+your build data never leaves your machine.
 
 ## Use it
 
@@ -36,6 +34,19 @@ from source is covered in [Develop](#develop).)
 > If a Chromium build refuses to run the inline script from `file://` (rare), run `npm run preview`
 > or serve the file with any static server — no hosting required.
 
+## Interface
+
+The app walks you through four steps — **Import → Preview → Convert → Download** — shown as a progress
+bar across the top.
+
+- **Build contents preview.** The moment you paste a valid code, a panel previews the build *before*
+  you convert: the character (class · ascendancy · level · main skill), an in-game-style **gear gallery**
+  (each item a rarity-framed tooltip; unequipped slots shown as dim placeholders; weapon swaps and tree
+  jewels included), and the **skills** and **passives** it allocates. The **●** marker means *saved to
+  the `.build`*; **○** means *preview only*.
+- **Ambient background.** An animated marble shader sits behind the app; toggle it on/off with the
+  flame button in the header (your choice is remembered), and it freezes for `prefers-reduced-motion`.
+
 ## What gets converted
 
 | Build part | Source (PoB2 XML) | `.build` output |
@@ -50,6 +61,10 @@ for eyeballing real output (git-ignored, not committed).
 
 ## Limitations (v1)
 
+- **Some PoB codes don't include every item.** A code copied from poe.ninja (or made by another tool)
+  can leave items out — if a slot is empty in the preview, it was empty in the code too (so it's also
+  missing in Path of Building), not something the conversion dropped. Cross-check the original build if
+  a piece looks absent.
 - **Meta / ascendancy skill gems** are emitted as-is, mirroring poe.ninja; GGG's spec notes the
   importer may treat them specially.
 - **Weapon-set passive tagging** is best-effort; verify multi-weapon-set builds in-game.

@@ -1,12 +1,12 @@
 {
-  "captured": "2026-06-04",
+  "captured": "2026-06-05",
   "sources": {
     "tree": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json",
     "gems": "https://repoe-fork.github.io/poe2/skill_gems.json",
     "uniques": "https://repoe-fork.github.io/poe2/uniques.json"
   },
   "counts": {
-    "passiveNodes": 4844,
+    "passiveNodes": 4912,
     "ascendancies": 25,
     "gems": 1186,
     "uniques": 441

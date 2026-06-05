@@ -89,10 +89,10 @@ intentional, not a shortfall:
   actually equipped/socketed.
 - **Meta / ascendancy gems** and **skill groups** are emitted the way poe.ninja does: one entry per
   socket group, first gem = the skill, the rest become `support_skills`.
-- **Slot ids** were cross-checked against real poe.ninja + Mobalytics exports (PoE2 0.5): gear uses
-  `Weapon1`/`Offhand1`/`Helm1`/…, weapon swap `Weapon2`/`Offhand2`, flasks `Flask1` (`slot_x` 0 = life,
-  1 = mana), charms `Charm1` (`slot_x` 0/1/2). Charms 4–6 aren't mapped yet — PoB doesn't export those
-  slots until they exist.
+- **Slot ids** were cross-checked against real poe.ninja + Mobalytics exports and verified in-game with
+  probe files (PoE2 0.5): gear uses `Weapon1`/`Offhand1`/`Helm1`/…, weapon swap `Weapon2`/`Offhand2`.
+  The belt row is a single `Flask1` inventory — `slot_x` 0 = life flask, 1 = mana flask, 2/3/4 = the
+  three charms. (The game ignores a `Charm1` id; only `Flask1` x2+ actually lands on a charm slot.)
 
 ## Caveats
 

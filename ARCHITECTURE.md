@@ -54,8 +54,8 @@ its in-game copy/paste text — rarity, name, base, `LevelReq`, mods).
 - **Items** — PoB slot → `.build` inventory id, with `slot_x` for the grid inventories:
   - Gear: `Weapon1`/`Offhand1` (set 1), `Weapon2`/`Offhand2` (swap), `Helm1`, `BodyArmour1`,
     `Gloves1`, `Boots1`, `Amulet1`, `Ring1`/`Ring2`, `Belt1`.
-  - Flasks: one `Flask1` inventory, `slot_x` 0 = life, 1 = mana.
-  - Charms: one `Charm1` inventory, `slot_x` 0/1/2.
+  - Belt row (flasks + charms) is one `Flask1` inventory: `slot_x` 0 = life flask, 1 = mana flask,
+    2/3/4 = the three charms (verified in-game — a `Charm1` id renders nothing in the Build Planner).
   - Uniques → `unique_name`; rares/magic → `additional_text` guidance; each item gets a
     `level_interval` of `[item LevelReq, 100]`.
 

@@ -10,16 +10,17 @@ export interface MappedItems {
 
 /**
  * PoB slot name -> `.build` Inventories id (+ slot_x for grid inventories).
- * Cross-checked against real working exports from poe.ninja and Mobalytics (PoE2 0.5):
+ * Cross-checked against real poe.ninja/Mobalytics exports AND verified in-game with probe `.build`
+ * files (PoE2 0.5):
  *   - Weapons/offhands span two weapon sets: Weapon1/Offhand1 (set 1), Weapon2/Offhand2 (set 2/swap).
- *   - Flasks are a 2-wide "Flask1" inventory: slot_x 0 = life, 1 = mana.
- *   - Charms are a separate 3-wide "Charm1" inventory: slot_x 0/1/2.
- * (Mobalytics emits `Charm1` x0/x1/x2; an earlier probe showed `Flask1` x2 ALSO lands on the charm
- *  slot, but `Charm1` is the canonical id — use it.) Slots not listed are skipped with a note.
+ *   - The belt row is ONE "Flask1" inventory: slot_x 0 = life flask, 1 = mana flask, 2/3/4 = the
+ *     three charms. A `Charm1`/`Charm2`/`Charm3` id (and slot_y variants) renders NOTHING in the
+ *     Build Planner — only `Flask1` x2+ lands on a charm slot. Mobalytics emits `Charm1`, but the
+ *     game ignores it; an in-game probe confirmed charm 1 = Flask1 x2, charm 2 = Flask1 x3.
+ * Slots not listed are skipped with a note.
  *
- * FUTURE: PoE2 0.5 has 3 charm slots; up to 6 are expected. PoB only exports slots that exist, so
- * nothing to do until then — when they appear they are most likely `Charm1` x3/x4/x5 (a wider row),
- * not a second slot_y row. Confirm with a slot-probe before mapping.
+ * FUTURE: PoE2 0.5 exposes up to 3 charm slots (Flask1 x2/x3/x4). If more appear they most likely
+ * continue the same row (Flask1 x5+); confirm with a slot-probe before mapping.
  */
 const SLOT_MAP: Record<string, { id: string; x?: number }> = {
   'Weapon 1': { id: 'Weapon1' },
@@ -36,9 +37,10 @@ const SLOT_MAP: Record<string, { id: string; x?: number }> = {
   Belt: { id: 'Belt1' },
   'Flask 1': { id: 'Flask1', x: 0 },
   'Flask 2': { id: 'Flask1', x: 1 },
-  'Charm 1': { id: 'Charm1', x: 0 },
-  'Charm 2': { id: 'Charm1', x: 1 },
-  'Charm 3': { id: 'Charm1', x: 2 },
+  // Charms share the flask row in the Build Planner: x2/x3/x4 (verified in-game; `Charm1` renders nothing).
+  'Charm 1': { id: 'Flask1', x: 2 },
+  'Charm 2': { id: 'Flask1', x: 3 },
+  'Charm 3': { id: 'Flask1', x: 4 },
 }
 
 const MAX_MODS = 10

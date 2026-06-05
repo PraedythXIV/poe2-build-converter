@@ -77,19 +77,20 @@ describe('convert (sample Monk / Martial Artist build)', () => {
     // level_interval derived from the item's LevelReq (quarterstaff requires 67) up to the cap
     expect(weapon1?.level_interval).toEqual([67, 100])
     for (const s of slots) {
-      // only known inventory_id forms are emitted
-      expect(s.inventory_id).toMatch(/^(Weapon|Offhand|Helm|BodyArmour|Gloves|Boots|Amulet|Ring|Belt|Flask|Charm)\d$/)
+      // only known inventory_id forms are emitted (no `Charm*` — the game ignores it)
+      expect(s.inventory_id).toMatch(/^(Weapon|Offhand|Helm|BodyArmour|Gloves|Boots|Amulet|Ring|Belt|Flask)\d$/)
       // every slot carries a [from, 100] level range
       expect(Array.isArray(s.level_interval) && s.level_interval[1]).toBe(100)
     }
   })
 
-  it('maps flasks to Flask1 (x0/x1) and charms to Charm1 (x0/x1/x2), per poe.ninja/Mobalytics', () => {
+  it('maps the whole belt row to one Flask1 inventory: x0/x1 flasks, x2/x3/x4 charms (verified in-game)', () => {
     const slots = result.build.inventory_slots ?? []
-    const flaskX = slots.filter((s) => s.inventory_id === 'Flask1').map((s) => s.slot_x).sort()
-    expect(flaskX).toEqual([0, 1]) // life flask x0, mana flask x1
-    const charmX = slots.filter((s) => s.inventory_id === 'Charm1').map((s) => s.slot_x).sort()
-    expect(charmX).toEqual([0, 1, 2]) // three charms
+    // belt row = one Flask1 inventory: x0 life, x1 mana, x2/x3/x4 the three charms.
+    const flask1X = slots.filter((s) => s.inventory_id === 'Flask1').map((s) => s.slot_x).sort((a, b) => (a ?? 0) - (b ?? 0))
+    expect(flask1X).toEqual([0, 1, 2, 3, 4])
+    // `Charm1` is NOT a real Build Planner inventory id — the game ignores it, so we never emit it.
+    expect(slots.some((s) => s.inventory_id === 'Charm1')).toBe(false)
     expect(slots.some((s) => s.inventory_id === 'Flask2')).toBe(false) // no bogus id
     // the swap weapon ("Weapon 1 Swap") maps to Weapon2 rather than being skipped
     expect(slots.some((s) => s.inventory_id === 'Weapon2')).toBe(true)

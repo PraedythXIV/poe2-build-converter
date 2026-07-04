@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "test:coverage": "vitest run --coverage",
     "preview": "vite preview",
     "serve:bff": "node server/dev.mjs",
     "deploy:bff": "node scripts/deploy-bff.mjs",
@@ -50,10 +51,12 @@
     "pako": "^3.0.0"
   },
   "devDependencies": {
+    "@codecov/vite-plugin": "^2.0.1",
     "@eslint/js": "^10.0.1",
     "@jsquash/webp": "^1.5.0",
     "@types/node": "^26.0.1",
     "@types/pako": "^2.0.4",
+    "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.7.0",
@@ -67,5 +70,11 @@
     "vite": "^8.1.0",
     "vite-node": "^6.0.0",
     "vitest": "^4.1.9"
+  },
+    "//overrides": "@codecov/vite-plugin declares a Vite 4-6 peer but works on our Vite 8 (verified building on Rolldown); the override feeds it our own vite so npm ci resolves without weakening peer checks project-wide. Remove when the plugin's peer range catches up.",
+  "overrides": {
+    "@codecov/vite-plugin": {
+      "vite": "$vite"
+    }
   }
 }

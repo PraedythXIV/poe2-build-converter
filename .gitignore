@@ -1,6 +1,8 @@
 # dependencies & build output (regenerated at the repo root)
 node_modules/
 dist/
+coverage/
+test-results.junit.xml
 
 # stale compiled output in src/ — src is TypeScript-only. A stray `tsc` WITHOUT --noEmit emits .js/.js.map
 # next to the .ts sources, and Vite/Vitest resolve `./x` → x.js BEFORE x.ts, so the .js silently SHADOWS

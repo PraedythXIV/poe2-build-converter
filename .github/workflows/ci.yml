@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  id-token: write # mint a short-lived OIDC token so Codecov upload authenticates without a stored secret
 
 jobs:
   validate:
@@ -25,7 +26,26 @@ jobs:
       - run: npx tsc --noEmit # typecheck (vitest transpiles without checking) — fail fast on type errors
       - run: npm run lint # eslint (correctness)
       - run: npm run format:check # prettier (formatting)
-      - run: npm test
+      - run: npm run test:coverage # tests + v8 coverage (lcov) + JUnit results (both uploaded below)
+      - name: Upload coverage to Codecov (Coverage Analytics)
+        if: ${{ !cancelled() }} # upload even if a test failed so the report reflects reality
+        uses: codecov/codecov-action@v5
+        with:
+          use_oidc: true # tokenless via GitHub OIDC (needs id-token: write above) — no CODECOV_TOKEN secret to manage
+          files: ./coverage/lcov.info
+          slug: PraedythXIV/poe2-build-converter
+          fail_ci_if_error: false # a Codecov outage must never fail the build
+      - name: Upload test results to Codecov (Test Analytics)
+        if: ${{ !cancelled() }} # flaky/failed-test detection needs the results even when tests fail
+        uses: codecov/test-results-action@v1
+        with:
+          use_oidc: true
+          files: ./test-results.junit.xml
+          fail_ci_if_error: false
+      - name: Build + upload bundle stats to Codecov (Bundle Analysis)
+        run: npx vite build # the codecov vite plugin uploads bundle-size stats via OIDC when CODECOV_BUNDLE is set
+        env:
+          CODECOV_BUNDLE: 'true'
       - run: npm run check:licenses # fail if any dependency isn't permissively licensed
       - run: npm run check:provenance # fail if a restricted dep/marker slipped in
       - run: npm run check:dedupe # fail if copy-paste duplication grows past the ratchet (.jscpd.json)

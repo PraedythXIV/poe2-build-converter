@@ -1,4 +1,5 @@
 import { defineConfig, type Plugin } from 'vite'
+import { codecovVitePlugin } from '@codecov/vite-plugin'
 
 // Inline the single render-blocking entry stylesheet into a <style> in the HTML <head> and drop its <link>.
 // The shell CSS (~20 KB gz) is otherwise a render-blocking round-trip on the critical path (HTML → CSS →
@@ -36,7 +37,19 @@ function inlineEntryCss(): Plugin {
 // hashed files under dist/assets and fetched on demand — not inlined — so the initial payload is a
 // small shell.
 export default defineConfig({
-  plugins: [inlineEntryCss()],
+  plugins: [
+    inlineEntryCss(),
+    // Codecov Bundle Analysis — uploads bundle-size stats so Codecov tracks payload over time + comments
+    // on PRs. MUST be last in the array. Gated on CODECOV_BUNDLE (set only in the CI build step) so local
+    // and other-workflow builds never upload; auth is GitHub OIDC (no token). NOTE: poe2 runs Vite 8
+    // (Rolldown), ahead of the plugin's declared Vite 4–6 peer range — installed with --legacy-peer-deps
+    // and verified to build cleanly.
+    codecovVitePlugin({
+      enableBundleAnalysis: process.env.CODECOV_BUNDLE === 'true',
+      bundleName: 'poe2-build-converter',
+      oidc: { useGitHubOIDC: true },
+    }),
+  ],
   // Relative URLs so dist/ runs under any path/host. Must be served over http, not file:// —
   // module scripts + asset fetches need an http origin.
   base: './',

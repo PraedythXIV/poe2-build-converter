@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/ci.yml)
 [![tests](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Ftests.json)](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/badges.yml)
+[![codecov](https://codecov.io/github/PraedythXIV/poe2-build-converter/graph/badge.svg)](https://codecov.io/github/PraedythXIV/poe2-build-converter)
 [![version](https://img.shields.io/github/package-json/v/PraedythXIV/poe2-build-converter?label=version&color=blue)](package.json)
 [![game data](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fmain%2Fdata-version.json&query=%24.poe2Patch&label=game%20data&color=8a5fd0)](data-version.json)
 [![license](https://img.shields.io/badge/license-MIT-gold)](LICENSE)

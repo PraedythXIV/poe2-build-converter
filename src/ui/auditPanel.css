@@ -1,0 +1,33 @@
+/* C3 — audit panel. Reuses the shared .alert component from styles.css for the findings themselves;
+   this file only adds the panel chrome. Token-driven only. */
+
+.ap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  min-width: 0;
+}
+
+.ap-sum {
+  margin: 0;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: var(--label-transform);
+  color: var(--text-secondary);
+}
+
+.ap-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+/* (the .alert.success skin MOVED VERBATIM to styles.css beside info/warn/danger, 2026-07-04 — the
+   download note now renders toastHtml('good') OUTSIDE this lazy chunk, so the skin can't live here) */
+
+/* honesty caption — a static audit, not a simulation */
+.ap-cap {
+  margin: 0;
+  font: 500 10.5px/1.5 var(--font-mono);
+  color: var(--text-muted);
+}

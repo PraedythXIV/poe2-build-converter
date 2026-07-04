@@ -1,21 +1,24 @@
 {
+  // Typecheck only — `npm run build` runs `tsc --noEmit`; Vite/esbuild does the actual transpile.
   "compilerOptions": {
     "target": "ES2022",
-    "useDefineForClassFields": true,
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
+    "moduleResolution": "bundler", // Vite resolves imports (extensionless, package "exports")
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true, // src/data/*.json imported as modules
+    "isolatedModules": true, // each file transpiled in isolation (esbuild/Vite)
+    "types": ["vite/client", "node"], // import.meta.env + asset modules; node for tests/scripts
+
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": false,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "types": ["vite/client", "node"]
+    "noUncheckedIndexedAccess": true, // indexed access is T | undefined — guard before use
+    "exactOptionalPropertyTypes": false, // deliberately off: too strict for optional DOM/option props
+
+    "skipLibCheck": true
   },
   "include": ["src", "tests"]
 }

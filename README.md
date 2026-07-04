@@ -1,159 +1,112 @@
-# PoE2 Build Converter — PoB2 import code → `.build`
+# PoE 2 - Sweet Vision — your PoB2 build, in-game
 
-A **completely offline** tool that converts a **Path of Building 2** export into a Path of Exile 2
-**Build Planner** (`.build`) file you can import in-game. Paste a PoB2 import code (or upload the decoded
-XML), get a spec-correct `.build` you drop into your game folder.
+[![CI](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/ci.yml/badge.svg)](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/ci.yml)
+[![tests](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Ftests.json)](https://github.com/PraedythXIV/poe2-build-converter/actions/workflows/badges.yml)
+[![version](https://img.shields.io/github/package-json/v/PraedythXIV/poe2-build-converter?label=version&color=blue)](package.json)
+[![game data](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fmain%2Fdata-version.json&query=%24.poe2Patch&label=game%20data&color=8a5fd0)](data-version.json)
+[![license](https://img.shields.io/badge/license-MIT-gold)](LICENSE)
 
-It converts the whole build in one pass — passives, skills, **and items**: uniques become
-`unique_name`, while rares and magic items become readable stat-priority guidance. As you paste, a
-live **Build contents** panel previews the character's gear, skills, and passives *before* you convert.
+[![lighthouse perf](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Flighthouse-performance.json&logo=lighthouse&logoColor=white)](https://praedythxiv.github.io/poe2-build-converter/)
+[![lighthouse a11y](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Flighthouse-accessibility.json&logo=lighthouse&logoColor=white)](https://praedythxiv.github.io/poe2-build-converter/)
+[![lighthouse best practices](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Flighthouse-best-practices.json&logo=lighthouse&logoColor=white)](https://praedythxiv.github.io/poe2-build-converter/)
+[![lighthouse seo](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FPraedythXIV%2Fpoe2-build-converter%2Fbadges%2Flighthouse-seo.json&logo=lighthouse&logoColor=white)](https://praedythxiv.github.io/poe2-build-converter/)
+
+**Turn a Path of Building 2 build into a Path of Exile 2 Build Planner file — and plan everything around it.** Paste a PoB2 export and get a `.build` you can load in-game, a full preview of your gear, skills and passives, your tree on the game's own artwork, and planners for the Atlas, the Genesis tree, Delirium emotions and market prices — all in one page.
 
 > This product isn't affiliated with or endorsed by Grinding Gear Games in any way.
 
-**Fully offline.** The built `index.html` is one self-contained file — no server, no backend, no
-network calls. The passive/gem/unique lookup tables are vendored into the bundle at build time, so
-your build data never leaves your machine.
+Everything runs **right in your browser** — nothing to install, and your build never leaves your device. The only online features are the opt-in market prices and pobb.in link import, and they only load when you use them.
 
-## Use it
+## Getting your build in-game
 
-1. **Get a PoB2 export:**
-   - In Path of Building 2: *Import/Export → Generate* (copies a code), **or**
-   - On poe.ninja: open a character → **Export to Path of Building** (copies the same kind of code).
-2. **Convert:** open the app (see below), paste the code (or upload the `.xml`), click **Convert**.
-3. **Save:** click **Download .build** (or **Copy JSON**).
-4. **Install:** drop the `.build` file here, and the game's File Watcher imports it automatically:
+1. Copy an export code from **Path of Building 2** (_Import/Export → Generate_), paste a **pobb.in** link — or use the filewatcher.
+2. Click **Convert** and download your `.build` file.
+3. Drop it in your BuildPlanner folder, or upload it at [pathofexile2.com/my-account/builds](https://pathofexile2.com/my-account/builds) — it shows up in the game's Build Planner.
    - **Windows:** `Documents\My Games\Path of Exile 2\BuildPlanner`
    - **Steam Deck:** `…/steamapps/compatdata/2315204395/pfx/drive_c/users/steamuser/Documents/My Games/Path of Exile 2/BuildPlanner`
 
-### Opening the app
+The app is a static site — open the hosted version in any browser, and it just works. (Hosting it yourself is covered in [Development](#development).)
 
-Download `poe2-build-converter.html` from the [**Releases**](../../releases/latest) page and open it
-in any browser — one self-contained file, fully offline. To share it, just send that file. (Building
-from source is covered in [Develop](#develop).)
+## What you can do
 
-> If a Chromium build refuses to run the inline script from `file://` (rare), run `npm run preview`
-> or serve the file with any static server — no hosting required.
+- **Convert whole builds in one pass** — passives, skills with their supports, and every equipped item: weapons, armour, rings, amulet, flasks, charms, weapon-swap sets and tree jewels.
+- **Preview before you convert** — the moment you paste a valid code you see the character, an in-game-style gear gallery with rarity-framed tooltips, and the skills and passives it allocates. **●** means saved to the `.build`; **○** means preview only.
+- **See your passive tree** — your imported tree drawn with the game's own artwork: pan, zoom, search, and hover any node for details. Weapon-set-specific nodes are tinted per set, and jewels show their radius rings.
+- **Plan your Atlas** — allocate the endgame atlas tree just like in-game (it auto-paths for you), pick your Atlas Masters' keystones, and share the whole plan with a single link.
+- **Plan your Genesis tree** — the Breach crafting tree, with tooltips showing what each Womb grows into. Editable and link-shareable like the Atlas.
+- **Delirium emotions recipes** — enter the emotions you own and instantly see every amulet anoint you can make (hidden anoint-only notables included), plus what each emotion does on jewels and waystones.
+- **Live market prices** — browse current prices and the currency exchange for the current league; it only loads when you ask.
+- **Several loadouts? One click.** If your PoB carries multiple loadouts, each becomes its own `.build` file in a single download.
+- **Know your gear's quality** — item mods show their tier with roll ranges, straight from the game's data. When a mod can't be matched exactly, you see nothing rather than a guess.
+- **File watcher** — point the app at your PoB build file once (Chrome/Edge) and every save in Path of Building re-imports it automatically.
+- **Your build's stats and a health check** — the ~100 stats PoB exported (DPS, EHP, resists…) shown verbatim, plus an honest audit: uncapped resists, unmet requirements, over-reserved spirit, missing gear and more.
+- **A light theme** — toggle it in the header.
 
-## Interface
+As always: the stats you see are Path of Building's own exported numbers — never recalculated, never approximated — and conversion happens entirely on your device.
 
-The app walks you through four steps — **Import → Preview → Convert → Download** — shown as a progress
-bar across the top.
+## Good to know
 
-- **Build contents preview.** The moment you paste a valid code, a panel previews the build *before*
-  you convert: the character (class · ascendancy · level · main skill), an in-game-style **gear gallery**
-  (each item a rarity-framed tooltip; unequipped slots shown as dim placeholders; weapon swaps and tree
-  jewels included), and the **skills** and **passives** it allocates. The **●** marker means *saved to
-  the `.build`*; **○** means *preview only*.
-- **Ambient background.** An animated marble shader sits behind the app; toggle it on/off with the
-  flame button in the header (your choice is remembered), and it freezes for `prefers-reduced-motion`.
+- **Some PoB codes don't include every item.** A code copied from poe.ninja can leave items out — if a slot is empty in the preview, it was empty in the code too, not dropped by the conversion.
+- **The `.build` format is deliberately lightweight** — rare and magic items travel as readable guidance text (it has no structured mod fields), jewels are noted on their passive node (they can't be *placed*), gem levels/quality aren't recorded, and weapon-swap weapons land in the format's second weapon set. That's the in-game format's design, not a conversion gap.
+- The format is **GGG "v1 / experimental"** and may change — treat output as a strong draft and confirm in-game.
+- More questions — a passive showing as "missing", the file not appearing in-game — are answered in the app's **FAQ** tab.
 
-## Features
+---
 
-- **Whole-build conversion in one pass** — passives, skills (with their supports), and every equipped item.
-- **All your gear** — weapons, armour, rings, amulet, **flasks, charms**, plus weapon-swap sets and tree jewels.
-- **Rich item data** — uniques by name; rares, magic items, base stats, jewels, and rune-granted stats
-  carried as the in-game guidance text the Build Planner displays.
-- **Level-aware items** — every item keeps its level requirement, so in the Build Planner it appears
-  from the level you can actually equip it ((the tooltips for gear (the little blue icon you can hover over) simply won't show in your inventory until you meet the level requirement for each)).
-- **Runes & soul-cores** named, with the stats they grant kept.
-- **Named passives** — keystones, notables, and masteries by their real names, not slugs.
-- **Per-weapon-set passives** — passives are tagged to the weapon set they belong to, so dual-weapon-set
-  builds map across the right sets.
-- **Live preview** — the whole build (gear gallery, skills, perks) shown before you convert.
-- **Self-contained** — one HTML file to open or share; no install, no network.
+## Development
 
-## What gets converted
-
-| Build part | Source (PoB2 XML) | `.build` output |
-|---|---|---|
-| Ascendancy | `<Spec ascendancyInternalId>` | `ascendancy` (verbatim, e.g. `Monk1`) |
-| Passives | `<Spec nodes>` (numeric) | `passives[]` ids via GGG tree lookup; weapon-set tagging; jewel-socket notes |
-| Skills | `<Skill><Gem gemId>` | `skills[]` with `support_skills[]` — gem ids pass through **verbatim** |
-| Items | `<Items>` + `<ItemSet>` | `inventory_slots[]` — uniques → `unique_name`, rares/magic → guidance text, each with a `level_interval` (`[item LevelReq, 100]`) |
-
-Run `npm run emit-sample` to generate a local `examples/sample.build` from the test fixture — handy
-for eyeballing real output (git-ignored, not committed).
-
-## By design
-
-The Build Planner `.build` is a lightweight share format, so several things are carried as **guidance
-text on purpose** — exactly what the in-game importer reads — rather than as structured fields. This is
-intentional, not a shortfall:
-
-- **Rare & magic items, item base stats, and tree jewels** become readable stat-priority guidance text
-  (the format has no structured mod fields, and jewels can't be *placed* — so each is noted on its
-  passive node). Uniques carry through by name.
-- The format records *which* gems you socketed, not their **levels / quality**.
-- **Weapon-swap and a few exotic slots**, and **auto-granted** (item-/tree-) skills, have no Build
-  Planner equivalent and are intentionally left out (you'll see a note), so the output reflects what you
-  actually equipped/socketed.
-- **Meta / ascendancy gems** and **skill groups** are emitted the way poe.ninja does: one entry per
-  socket group, first gem = the skill, the rest become `support_skills`.
-- **Slot ids** were cross-checked against real poe.ninja + Mobalytics exports and verified in-game with
-  probe files (PoE2 0.5): gear uses `Weapon1`/`Offhand1`/`Helm1`/…, weapon swap `Weapon2`/`Offhand2`.
-  The belt row is a single `Flask1` inventory — `slot_x` 0 = life flask, 1 = mana flask, 2/3/4 = the
-  three charms. (The game ignores a `Charm1` id; only `Flask1` x2+ actually lands on a charm slot.)
-
-## Caveats
-
-- **Some PoB codes don't include every item.** A code copied from poe.ninja (or another tool) can leave
-  items out — if a slot is empty in the preview, it was empty in the code too (so it's also missing in
-  Path of Building), not something the conversion dropped. Cross-check the original build if a piece
-  looks absent.
-- **Weapon-set passive tagging** is best-effort — verify multi-weapon-set builds in-game.
-- The format is **GGG "v1 / experimental"** and may change — treat output as a strong draft and confirm
-  in-game.
-
-## Updating the data (per patch)
-
-Passive/gem/unique ids change between PoE2 patches. Refresh the vendored lookups, then rebuild:
-
-```bash
-npm run fetch-data   # re-pulls + prunes GGG + repoe-fork data into src/data/
-npm run build
-```
-
-Sources (public, no auth): GGG `grindinggear/poe2-skilltree-export` (passive ids, ascendancies) and
-the `repoe-fork/poe2` datamine (gem + unique names). Neither ships a license; we consume/refresh
-their data, we don't re-host it.
-
-## Develop
+Build / test / data-pipeline issues live in **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**; how the pieces fit is in **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
 ```bash
 npm install
-npm test          # vitest: converter + UI-wiring tests (jsdom)
-npm run dev       # live dev server
-npm run build     # typecheck + bundle -> dist/index.html, copied to release/poe2-build-converter.html
+npm test            # vitest: engine, panels, tree, psg decoder, tiers, BFF (375 tests)
+npm run dev         # live dev server (http://localhost:5173)
+npm run build       # typecheck + multi-file, content-hashed, code-split bundle -> dist/
+npm run serve:bff   # local price proxy for the Market prices card (http://localhost:8787)
+npm run check:compliance  # license allowlist + provenance guards
 ```
 
-## How it works
+The built `dist/` is a plain static site — serve it over http from any host (GitHub Pages / CF Pages); `file://` won't work (module scripts + asset fetches need an origin). The only backend is the optional, self-hostable price proxy (see [server/README.md](server/README.md)).
 
-A `.build` file is plain JSON the game imports from your BuildPlanner folder. Generating one is mostly
-an id-mapping problem, solved entirely offline from bundled lookup tables:
+### How the conversion works
 
-1. **Decode** — a PoB2 export code is URL-safe base64 → zlib → XML (`<PathOfBuilding2>`); raw XML is
-   accepted directly.
-2. **Parse** — read the active passive `<Spec>` (numeric node ids, ascendancy, weapon sets, jewel
-   sockets), the active `<SkillSet>` socket groups, and the equipped `<ItemSet>` items.
-3. **Map** — passives: numeric node id → `PassiveSkills` id via the bundled GGG tree table; skills:
-   one entry per socket group (first gem = the skill, the rest = `support_skills`), gem ids passed
-   through verbatim; items: PoB slot → inventory id (+ `slot_x` for the flask/charm grids), uniques →
-   `unique_name`, rares → guidance text, each with a `level_interval`.
+A `.build` file is plain JSON the game imports from your BuildPlanner folder. Generating one is an id-mapping problem, solved entirely client-side from bundled lookup tables:
+
+1. **Decode** — a PoB2 export code is URL-safe base64 → zlib → XML (`<PathOfBuilding2>`); raw XML accepted directly.
+2. **Parse** — read the active passive `<Spec>` (numeric node ids, ascendancy, weapon sets, jewel sockets), the active `<SkillSet>` socket groups, and the equipped `<ItemSet>` items.
+3. **Map** — passives: numeric node id → `PassiveSkills` id via the bundled GGG tree table; skills: one entry per socket group (first gem = the skill, the rest = `support_skills`), gem ids passed through verbatim; items: PoB slot → inventory id (+ `slot_x` for the flask/charm grids), uniques → `unique_name`, rares → guidance text, each with a `level_interval`.
 4. **Emit** — assemble the `Build` object and serialize it to a `.build` file.
 
-The slot/skill conventions were verified against the in-game importer and real working exports from
-poe.ninja and Mobalytics. See **[ARCHITECTURE.md](ARCHITECTURE.md)** for the full pipeline, data
-sources, and design decisions. The authoritative format spec is GGG's
-[Build Planner developer docs](https://www.pathofexile.com/developer/docs/game#buildplanner).
+Slot and skill conventions were verified against the in-game importer (probe files) and real working exports from poe.ninja and Mobalytics. The authoritative format spec is GGG's [Build Planner developer docs](https://www.pathofexile.com/developer/docs/game#buildplanner).
 
-## Project layout
+### Updating the game data (per patch)
 
-```
-src/convert/      decode -> parsePob -> mapPassives/mapSkills/mapItems -> emit   (the engine)
-src/data/         vendored, pruned lookup tables (generated by scripts/fetch-data.mjs)
-src/main.ts       UI wiring;  src/styles.css  tokens + components from a shared UI library
-scripts/          fetch-data (vendoring), emit-sample (QA), release (names the single file)
-tests/            converter + UI-wiring tests, with the PoB2 fixture in tests/fixtures/
+All game data is refreshed by **our own pipeline** — no third-party datamine dependency:
+
+```bash
+npm run data:refresh   # probe GGG's patch server -> extract tables -> rebuild all vendored JSON
+npm run build
 ```
 
-Build output (`dist/`, `release/`) is git-ignored; the single-file app ships via the Releases page.
+Under the hood: `data:patch` asks **GGG's own PoE2 patch server** for the live build; `data:extract` pulls the needed tables/files from the patch CDN via [`pathofexile-dat`](https://github.com/SnosMe/poe-dat-viewer) (MIT); the tree / atlas / genesis / icon graph and mod-tier builders prune everything into `src/data/`. Invariant gates fail loud if a refresh would regress counts. Sources: GGG's official [`poe2-skilltree-export`](https://github.com/grindinggear/poe2-skilltree-export) (listed on their developer docs' Data Exports page) and GGG's own game files via the patch CDN — their data, our extraction; credits in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+
+### Project layout
+
+```
+src/convert/      decode -> parsePob -> mapPassives/mapSkills/mapItems -> emit -> summarize   (the engine, no DOM)
+src/pob/          PoB2 XML model (parse, item text, raw passthrough)
+src/tree/         Canvas2D tree renderer + the shared mountTree allocation engine
+src/atlas/  src/genesis/   editable planners over mountTree (+ atlas #-share codec) — planning-only
+src/emotions/     distilled-emotion planner (anoint / jewel / waystone)
+src/items/        affix-tier matcher + chips + icon atlas + itc-card overlay
+src/economy/      opt-in BFF client + price/exchange panel;  server/  the thin proxy (worker + dev shim)
+src/audit/        build-audit rules;  src/ui/  shared HTML-string panels + helpers
+src/export/       multi-loadout .build emit + PoB loadout recovery;  src/watch/  live PoB file-watch (Chromium)
+src/data/  src/assets/    vendored JSON + packed webp (built offline by scripts/)
+src/copy.ts       all user-facing wording + the FAQ;  src/main.ts  UI wiring;  src/styles.css  vendored uikit + theme
+src/vendor/uikit/ CSS + JS subset of the shared ui-component-library (copied; behaviors.js = the APG interaction layer)
+scripts/          data pipeline (patch probe, extraction, builders), psg decoder, QA, license/provenance guards
+tests/            engine + panel + tree + psg + tier + BFF tests (375); fixtures in tests/fixtures/
+```
+
+Build output (`dist/`) is git-ignored; the app ships as a static site.

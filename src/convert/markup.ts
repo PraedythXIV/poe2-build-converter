@@ -6,8 +6,20 @@
 // <bronze><silver><gold><unique>, and custom <rgb(r, g, b)>.
 
 export type Color =
-  | 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'indigo' | 'violet'
-  | 'black' | 'white' | 'grey' | 'bronze' | 'silver' | 'gold' | 'unique'
+  | 'red'
+  | 'orange'
+  | 'yellow'
+  | 'green'
+  | 'blue'
+  | 'indigo'
+  | 'violet'
+  | 'black'
+  | 'white'
+  | 'grey'
+  | 'bronze'
+  | 'silver'
+  | 'gold'
+  | 'unique'
 
 /** Braces are the markup delimiters; a stray one would corrupt the popup. Strip them from text. */
 function safe(text: string): string {
@@ -15,7 +27,7 @@ function safe(text: string): string {
 }
 
 /** Wrap text in a markup tag: wrap('grey', 'hi') -> "<grey>{hi}". */
-export function wrap(tag: string, text: string): string {
+function wrap(tag: string, text: string): string {
   return `<${tag}>{${text}}`
 }
 
@@ -25,5 +37,6 @@ export function color(c: Color, text: string): string {
 
 /** Join lines with the literal newline the format expects inside additional_text. */
 export function lines(...parts: Array<string | null | undefined>): string {
-  return parts.filter((p): p is string => !!p && p.length > 0).join('\n')
+  // Drop only null/undefined (omitted lines); a literal '' is kept as an intentional blank separator.
+  return parts.filter((p): p is string => p != null).join('\n')
 }

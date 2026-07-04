@@ -1,0 +1,264 @@
+/* ui-component-library — themes/default.css
+   Neutral dark baseline. Applies at :root AND [data-theme="default"], so the
+   components work even with no theme attribute set. Every other theme overrides
+   these via [data-theme="<name>"]; swap the attribute to reskin everything.
+   This is a TOKEN set only — no per-component CSS. One component, any theme.
+   This file is the canonical token CONTRACT (the values every component reads);
+   the full annotated table is in docs/token-contract.md. */
+:root,
+[data-theme="default"] {
+  /* ── accent ─────────────────────────────────────────────────────────── */
+  --accent: #5a9bff;
+  --accent-rgb: 90, 155, 255;
+  --accent-contrast: #06101e;   /* text on accent */
+  --accent-hover: #82b4ff;
+  --accent-active: #3f78dd;
+  /* --accent-fill: the BACKGROUND of prominent filled accent surfaces (the primary button /
+     CTAs). Read as var(--accent-fill, var(--accent)) in components.css, so it defaults to the
+     flat --accent everywhere and is NOT in the parity contract; a theme can set it to a gradient
+     for a glossy/brushed-metal CTA (e.g. poe2's forged gold). Text on it stays --accent-contrast.
+     Intentionally NOT declared here — an optional theme-level knob (like --accent-ink). */
+  /* --accent-ink: accent-as-TEXT on faint accent tints. Read as var(--accent-ink, var(--accent))
+     in components.css, so it defaults to --accent everywhere and a LIGHT theme overrides it with a
+     darker tone (see m3-baseline-light) to keep small accent text on its own tint clearing AA.
+     Intentionally NOT declared here — a light-theme-only knob, kept out of the parity contract. */
+  /* shape knobs — let a theme forge angular/beveled controls instead of M3's rounded default:
+       --btn-radius / --btn-clip   : button corner radius + optional chamfer polygon (read in .ix-btn)
+       --pill-radius / --pill-clip : same pair for pill/chip atoms (.ix-seg, .ix-seg-thumb, .ix-chip,
+                                     .fb-pill). --pill-radius must drop the 999px rounding for --pill-clip
+                                     to read, since a full pill fits inside the chamfer and hides it.
+     All read with a fallback (var(--pill-clip, none) / var(--pill-radius, var(--radius-pill))), so they
+     default to the rounded M3 shape and stay OUT of the parity contract. poe2 sets all four. */
+  /* --seg-thumb-fill / --seg-thumb-ink: the segmented sliding thumb's background + its selected-label
+     color. Read as var(--seg-thumb-fill, var(--accent-2-container)) / var(--seg-thumb-ink,
+     var(--accent-2-container-contrast)); default to the M3 secondary container. A theme can point the
+     fill at --accent-fill so toggling slides a colored plate across (poe2's gold), with ink for legibility. */
+  --spd: 1;                               /* animation speed multiplier */
+
+  /* ── structural skin axis (neutral here; flavored themes flip these) ─ */
+  --label-transform: none;                /* caps labels: stencil → uppercase */
+  --glow-a: 0;                            /* accent-glow gate: 0 = no bloom */
+  --frame-corner-color: transparent;      /* L-bracket corner ticks */
+  --cta-clip: none;                       /* chamfered "slab" CTA shape (hero/keybar CTAs) */
+  --cta-sharp: 1;                          /* 1 = CTA keeps its radius · 0 = squared (set with a chamfer so it isn't both rounded AND clipped) */
+  --strip-accent-border: var(--border-color);
+  /* button shape axis — per-control corner, independent of --radius-scale.
+     ROUNDED = defaults · SHARP = set both radii to var(--radius-0)
+     · BEVELED = set --btn-clip to a chamfer polygon (radius then irrelevant). */
+  --btn-radius: var(--radius-pill);       /* button resting corner */
+  --btn-radius-press: var(--radius-3);    /* button pressed corner (Expressive shape-morph) */
+  --btn-clip: none;                       /* polygon() → beveled/chamfered buttons */
+  /* elevation: surfaces (cards/panels) add this as an EXTRA drop shadow. The
+     default is a transparent no-op (keeps the flat dark look + valid in a
+     shadow list); the editor's Drop-shadow slider raises it to --shadow-1..5. */
+  --elevation: 0 0 #0000;
+
+  /* ── surfaces ───────────────────────────────────────────────────────── */
+  --bg-color: #0b0d12;
+  --canvas-bg: #0e1117;
+  --menu-bg: #0b0d12;
+  --input-bg: #161a22;
+  --surface-1: #11141b;
+  --surface-2: #181c25;
+  --surface-3: #232834;
+  --surface-overlay: rgba(13, 16, 22, 0.96);
+
+  /* ── text ───────────────────────────────────────────────────────────── */
+  --fg-color: #f2f4f8;
+  --input-text: #dfe3ea;
+  --text-primary: #e8ebf1;
+  --text-secondary: #9aa3b2;
+  --text-muted: #8a93a4;
+  --descrip-text: #9aa3b2;
+  --widget-disabled-text-color: #4a525f;
+
+  /* ── borders + radii ────────────────────────────────────────────────── */
+  --border-color: #2a3140;
+  --interface-stroke: #232a37;
+  /* ONE knob resizes every corner in the library: 0 = sharp UI, 1 = baseline,
+     >1 = rounder. Every --radius-N (and --radius-pill) derives from it, so a
+     theme just sets --radius-scale (no per-step overrides needed). The editor's
+     "Radius scale" slider writes this token directly. */
+  --radius-scale: 1;
+  --radius-1: calc(4px * var(--radius-scale));
+  --radius-2: calc(6px * var(--radius-scale));
+  --radius-3: calc(10px * var(--radius-scale));
+  --radius-4: calc(14px * var(--radius-scale));
+  --radius-pill: calc(999px * var(--radius-scale));
+
+  /* ── spacing scale (the gap/padding rhythm — one 4px-based density scale,
+        consumed by css/utilities.css and available to components/apps).
+        --space-scale is a global density knob (mirrors --radius-scale): a theme
+        or the editor's Density slider sets it once and every step rescales. ── */
+  --space-scale: 1;
+  --space-0: 0px;
+  --space-1: calc(4px * var(--space-scale));
+  --space-2: calc(8px * var(--space-scale));
+  --space-3: calc(12px * var(--space-scale));
+  --space-4: calc(16px * var(--space-scale));
+  --space-5: calc(24px * var(--space-scale));
+  --space-6: calc(32px * var(--space-scale));
+  --space-7: calc(48px * var(--space-scale));
+  --space-8: calc(64px * var(--space-scale));
+  /* half-steps — each the midpoint of the two whole steps around it (2/6/10/14/20px).
+     They let the dense components (chips, compact controls) ride the density knob too,
+     instead of pinning fine spacing in literal px. Same calc(scale) so they rescale. */
+  --space-0-5: calc(2px * var(--space-scale));
+  --space-1-5: calc(6px * var(--space-scale));
+  --space-2-5: calc(10px * var(--space-scale));
+  --space-3-5: calc(14px * var(--space-scale));
+  --space-4-5: calc(20px * var(--space-scale));
+
+  /* ── type (system stacks — no web fonts required) ───────────────────── */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-serif: ui-serif, Georgia, "Times New Roman", Times, serif;
+
+  /* ── status ─────────────────────────────────────────────────────────── */
+  --status-success: #3fc4a0;   /* jade */
+  --status-warning: #f0a86a;   /* soft orange */
+  --status-danger: #ef8a8a;    /* soft red */
+  --status-info: #6aa8ff;      /* blue */
+
+  /* ── categorical palette (--cat-1..16 — a 16-colour qualitative set) ── */
+  /* blue-dominant: most categories are shades of blue, with jade/teal, soft-red
+     and soft-orange mixed in so adjacent categories stay distinct and legible. */
+  --cat-1: #5b87e0;             /* deep blue */
+  --cat-2: #7cc4ff;              /* sky blue */
+  --cat-3: #9cc4ec;       /* light blue */
+  --cat-4: #7a9bc4;/* steel blue */
+  --cat-5: #ef8a8a;               /* soft red */
+  --cat-6: #56c5e8;             /* cyan-blue */
+  --cat-6-rgb: 86, 197, 232;
+  --cat-7: #8a9eff;            /* indigo / periwinkle */
+  --cat-8: #4fd1c5;              /* jade / teal */
+  --cat-9: #f0a86a;      /* soft orange */
+  --cat-10: #3fc4b0;       /* teal */
+  --cat-11: #9bd6cf;       /* pale teal */
+  --cat-12: #9aa6bd;             /* slate blue-grey */
+  --cat-13: #5fd0e8;            /* cyan */
+  --cat-14: #8ab0e0;           /* soft blue */
+  --cat-15: #b8d0ec;            /* pale blue */
+  --cat-16: #7e9cc0;             /* muted blue */
+
+  /* ── "node" surfaces (used by the canvas / node-graph components) ───── */
+  --node-default-bgcolor: #181c25;
+  --node-default-boxcolor: #2a3140;
+  --node-default-color: #232834;
+  --node-selected-title-color: #f2f4f8;
+  --node-title-color: #aeb6c4;
+  --node-text-color: #9aa3b2;
+  --bar-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+
+  /* ════ M3 Stage-0 foundation tokens — INERT until a later stage consumes
+     them (no component reads these yet, so the rendered look is unchanged).
+     Spec + md.sys mapping: docs/m3-foundation-spec.md. Color values are
+     derived from the palette above by the spec §0 rules and committed as
+     literals (regenerate per-kit via scripts/derive-m3-roles.mjs). Numeric
+     values cross-checked against the Apache-2.0 token sources (androidx
+     compose-material3, @material/web — © Google LLC, Apache License 2.0).
+     Concrete motion springs are GENERATED into css/motion.css; the
+     scheme-agnostic motion ALIASES are declared per-theme (end of this
+     block) — motion.css loads after theme sheets, so a :root alias there
+     would be theme-unoverridable at equal specificity. ═══════════════════ */
+
+  /* ── state layers (overlay opacity of the content color) ────────────── */
+  --state-hover-a: 0.08;
+  --state-focus-a: 0.10;
+  --state-press-a: 0.10;
+  --state-drag-a: 0.16;
+
+  /* ── surface ladder extension (container-lowest / -highest) ─────────── */
+  --surface-0: #0e1117;   /* same value as --canvas-bg today — intentional */
+  --surface-4: #2e3443;
+
+  /* ── color roles (container / on-container / on-fill + inverse, scrim) ─ */
+  --accent-container: #2b436b;
+  --accent-container-contrast: #cee1ff;
+  --accent-2: #749ee0;                    /* secondary */
+  --accent-2-rgb: 116, 158, 224;
+  --accent-2-contrast: #1b2331;
+  --accent-2-container: #344460;
+  --accent-2-container-contrast: #d5e2f6;
+  --accent-3: #4fd1c5;                    /* tertiary — palette counter-hue */
+  --accent-3-rgb: 79, 209, 197;
+  --accent-3-contrast: #152a2d;
+  --accent-3-container: #275657;
+  --accent-3-container-contrast: #caf1ee;
+  --status-danger-rgb: 239, 138, 138;
+  --status-danger-contrast: #2d2024;
+  --status-danger-container: #5f3d42;
+  --status-danger-container-contrast: #fadcdc;
+  --status-success-rgb: 63, 196, 160;
+  --status-success-contrast: #132827;
+  --status-success-container: #21524a;
+  --status-success-container-contrast: #c5ede3;
+  --status-warning-rgb: 240, 168, 106;
+  --status-warning-contrast: #2d241f;
+  --status-warning-container: #5f4837;
+  --status-warning-container-contrast: #fbe5d2;
+  --status-info-rgb: 106, 168, 255;
+  --status-info-contrast: #192436;
+  --status-info-container: #30486b;
+  --status-info-container-contrast: #d2e5ff;
+  --surface-inverse: #e8ebf1;
+  --text-inverse: #181c25;
+  --accent-inverse: #3f78dd;
+  --scrim: #000000;
+  --scrim-rgb: 0, 0, 0;
+  --scrim-a: 0.32;
+  --border-strong: #474e5e;
+
+  /* ── typescale (M3 roles ×l/m/s; family stays --font-sans; labels still
+        honor --label-transform) ──────────────────────────────────────────── */
+  --type-display-l-size: 57px; --type-display-l-lh: 64px; --type-display-l-weight: 400; --type-display-l-track: -0.25px; --type-display-l-weight-emph: 500;
+  --type-display-m-size: 45px; --type-display-m-lh: 52px; --type-display-m-weight: 400; --type-display-m-track: 0px; --type-display-m-weight-emph: 500;
+  --type-display-s-size: 36px; --type-display-s-lh: 44px; --type-display-s-weight: 400; --type-display-s-track: 0px; --type-display-s-weight-emph: 500;
+  --type-headline-l-size: 32px; --type-headline-l-lh: 40px; --type-headline-l-weight: 400; --type-headline-l-track: 0px; --type-headline-l-weight-emph: 500;
+  --type-headline-m-size: 28px; --type-headline-m-lh: 36px; --type-headline-m-weight: 400; --type-headline-m-track: 0px; --type-headline-m-weight-emph: 500;
+  --type-headline-s-size: 24px; --type-headline-s-lh: 32px; --type-headline-s-weight: 400; --type-headline-s-track: 0px; --type-headline-s-weight-emph: 500;
+  --type-title-l-size: 22px; --type-title-l-lh: 28px; --type-title-l-weight: 400; --type-title-l-track: 0px; --type-title-l-weight-emph: 500;
+  --type-title-m-size: 16px; --type-title-m-lh: 24px; --type-title-m-weight: 500; --type-title-m-track: 0.15px; --type-title-m-weight-emph: 700;
+  --type-title-s-size: 14px; --type-title-s-lh: 20px; --type-title-s-weight: 500; --type-title-s-track: 0.1px; --type-title-s-weight-emph: 700;
+  --type-body-l-size: 16px; --type-body-l-lh: 24px; --type-body-l-weight: 400; --type-body-l-track: 0.5px; --type-body-l-weight-emph: 500;
+  --type-body-m-size: 14px; --type-body-m-lh: 20px; --type-body-m-weight: 400; --type-body-m-track: 0.25px; --type-body-m-weight-emph: 500;
+  --type-body-s-size: 12px; --type-body-s-lh: 16px; --type-body-s-weight: 400; --type-body-s-track: 0.4px; --type-body-s-weight-emph: 500;
+  --type-label-l-size: 14px; --type-label-l-lh: 20px; --type-label-l-weight: 500; --type-label-l-track: 0.1px; --type-label-l-weight-emph: 700;
+  --type-label-m-size: 12px; --type-label-m-lh: 16px; --type-label-m-weight: 500; --type-label-m-track: 0.5px; --type-label-m-weight-emph: 700;
+  --type-label-s-size: 11px; --type-label-s-lh: 16px; --type-label-s-weight: 500; --type-label-s-track: 0.5px; --type-label-s-weight-emph: 700;
+
+  /* ── shape scale extension (Expressive corners; all derive from --radius-scale) ── */
+  --radius-0: 0px;                          /* always sharp (scale-exempt) */
+  --radius-5: calc(20px * var(--radius-scale));
+  --radius-6: calc(28px * var(--radius-scale));
+  --radius-7: calc(32px * var(--radius-scale));
+  --radius-8: calc(48px * var(--radius-scale));
+
+  /* ── elevation (material-web level 0–5 combos; tintable via --shadow-rgb;
+        --bar-shadow stays the bars' bespoke legacy token) ──────────────── */
+  --shadow-rgb: 0, 0, 0;
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px rgba(var(--shadow-rgb), .3), 0 1px 3px 1px rgba(var(--shadow-rgb), .15);
+  --shadow-2: 0 1px 2px rgba(var(--shadow-rgb), .3), 0 2px 6px 2px rgba(var(--shadow-rgb), .15);
+  --shadow-3: 0 1px 3px rgba(var(--shadow-rgb), .3), 0 4px 8px 3px rgba(var(--shadow-rgb), .15);
+  --shadow-4: 0 2px 3px rgba(var(--shadow-rgb), .3), 0 6px 10px 4px rgba(var(--shadow-rgb), .15);
+  --shadow-5: 0 4px 4px rgba(var(--shadow-rgb), .3), 0 8px 12px 6px rgba(var(--shadow-rgb), .15);
+
+  /* ── motion scheme (the scheme-agnostic alias pairs components consume;
+        spec §6). Concrete spring pairs live in css/motion.css (GENERATED —
+        scripts/gen-motion.mjs). Each theme picks its scheme by pointing
+        these at --motion-exp-* (Expressive — the library default) or
+        --motion-std-* (calmer, for data-dense kits). ───────────────────── */
+  --motion-spatial-fast-dur: var(--motion-exp-spatial-fast-dur);
+  --motion-spatial-fast-ease: var(--motion-exp-spatial-fast-ease);
+  --motion-spatial-dur: var(--motion-exp-spatial-dur);
+  --motion-spatial-ease: var(--motion-exp-spatial-ease);
+  --motion-spatial-slow-dur: var(--motion-exp-spatial-slow-dur);
+  --motion-spatial-slow-ease: var(--motion-exp-spatial-slow-ease);
+  --motion-effect-fast-dur: var(--motion-exp-effect-fast-dur);
+  --motion-effect-fast-ease: var(--motion-exp-effect-fast-ease);
+  --motion-effect-dur: var(--motion-exp-effect-dur);
+  --motion-effect-ease: var(--motion-exp-effect-ease);
+  --motion-effect-slow-dur: var(--motion-exp-effect-slow-dur);
+  --motion-effect-slow-ease: var(--motion-exp-effect-slow-ease);
+}

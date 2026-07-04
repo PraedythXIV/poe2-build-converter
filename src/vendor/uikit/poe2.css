@@ -1,0 +1,513 @@
+/* ════════════════════════════════════════════════════════════════════════════
+   PATH OF EXILE 2 — "WRAECLAST" — design tokens
+   A theme inspired by Grinding Gear Games' PATH OF EXILE 2 (2024): grimdark
+   painterly high-fantasy. The governing rule of the look is FIGURE/GROUND
+   CONTRAST — ~75% of the screen is warm near-black, framed in tarnished gold,
+   and the ONLY high-chroma color is "magic": spell VFX and the iconic item
+   rarity codes. Dull world, brilliant magic. (See POE2-COLOR-THEORY-GUIDE.md §2.)
+
+   Two layers live here:
+     1. RAW PALETTE  → the --poe-* design constants (the source of truth).
+     2. CONTRACT MAP → the ui-component-library token set, mapped onto the palette,
+                        so this file is a valid drop-in `themes/poe2.css` and the
+                        263 library components + the poe-* kit reskin for free.
+
+   Activate:  <html data-theme="poe2">                       → WRAECLAST (dark)
+
+   Fonts: the game's logo is custom lettering; the in-game UI face is unpublished.
+   This theme specs free echoes of the carved-serif + clean-UI feel with full
+   fallbacks (Cinzel · EB Garamond · Inter · IBM Plex Mono). Swap in real faces by
+   redefining --font-display / --font-editorial / --font-sans / --font-mono.
+
+   Confidence: item-rarity hexes are CONFIRMED game defaults; chrome/element
+   hexes are calibrated estimates (GGG publishes no spec). See the guide's appendix.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1 · RAW PALETTE — the immutable Wraeclast constants ─────────────────────── */
+:root {
+  /* ── METALS — the tarnished gold/bronze ramp. Everything ornamental is built
+     from this, lit top-left. NEVER flat-filled: metal is a gradient (see --poe-metal). */
+  --poe-gold-hi:  #ecd08a;  --poe-gold-hi-rgb: 236, 208, 138;  /* polished highlight     */
+  --poe-gold:     #c89b46;  --poe-gold-rgb:    200, 155,  70;   /* THE brand gold / accent */
+  --poe-gold-lo:  #9a6f2e;  --poe-gold-lo-rgb: 154, 111,  46;   /* shadowed gold          */
+  --poe-bronze:   #7c5424;  --poe-bronze-rgb:  124,  84,  36;   /* base bronze            */
+  --poe-tarnish:  #463012;                                       /* tarnish / deep shadow  */
+  --poe-pewter:   #6e6a60;  --poe-pewter-rgb: 110, 106, 96;     /* cold iron / pewter alt */
+  --poe-pewter-hi:#a8a294;                                       /* pewter highlight       */
+
+  /* ── GROUND: WRAECLAST — warm near-blacks (R≥G≥B). The world is candlelit stone;
+     the blacks lean brown/olive so gold reads as EMITTED light, not paint. */
+  --poe-bg-0: #0a0908;   /* deepest — page void                  */
+  --poe-bg-1: #0f0d0b;   /* base surface / canvas                */
+  --poe-bg-2: #14110d;   /* raised surface                       */
+  --poe-bg-3: #1c1813;   /* raised + / input wells               */
+  --poe-bg-4: #241e16;   /* highest chrome / hovered             */
+
+  /* ── GROUND: PARCHMENT — aged paper + ink. The "scroll / lore / map" world. */
+  --poe-parch-0: #d9c7a0;  /* base paper                          */
+  --poe-parch-1: #cdb98e;  /* raised paper                        */
+  --poe-parch-2: #bda878;  /* raised + / wells                    */
+  --poe-parch-3: #a88f63;  /* edges / dividers                    */
+  --poe-ink:     #241b12;  /* paper ink (warm near-black)         */
+
+  /* ── TEXT / BONE — warm off-whites for ink on the dark ground. */
+  --poe-bone:   #ded3bf;   /* primary text — warm parchment-white  */
+  --poe-ash:    #a39884;   /* secondary text                       */
+  --poe-ash-2:  #8a7f6c;   /* muted text — raised from #6f6657 to clear WCAG AA (~4.8:1 on the warm grounds) */
+  --poe-dim:    #4a4338;   /* disabled                             */
+  --poe-white:  #f3ece0;   /* high-emphasis / metal glints         */
+
+  /* ── SIGNAL HUES — "magic". The only high-chroma color in the system. Each is a
+     MEANING (element / resource), never decoration. -rgb where used at alpha. */
+  --poe-fire:      #ff6a1a;  --poe-fire-rgb:      255, 106,  26;  /* fire — warm orange    */
+  --poe-ember:     #c5400e;  --poe-ember-rgb:     197,  64,  14;  /* ember / heat / blood-fire */
+  --poe-cold:      #7fc8e6;  --poe-cold-rgb:      127, 200, 230;  /* cold — ice blue       */
+  --poe-frost:     #cfefff;                                        /* cold highlight        */
+  --poe-lightning: #ffe24a;  --poe-lightning-rgb: 255, 226,  74;  /* lightning — electric yellow */
+  --poe-arc:       #b98cff;                                        /* lightning arc-violet  */
+  --poe-chaos:     #b06ae0;  --poe-chaos-rgb:     176, 106, 224;  /* chaos — corrupt violet */
+  --poe-toxic:     #3fbf6f;  --poe-toxic-rgb:      63, 191, 111;  /* poison / caustic green */
+  --poe-phys:      #c9c2b6;                                        /* physical — bone neutral */
+
+  /* ── RESOURCES — the HUD orbs. */
+  --poe-life:    #b11b1b;  --poe-life-rgb:    177,  27,  27;   /* life orb — blood red    */
+  --poe-life-hi: #e23a2e;                                        /* life top highlight      */
+  --poe-mana:    #1e5fc8;  --poe-mana-rgb:     30,  95, 200;    /* mana orb — deep blue    */
+  --poe-mana-hi: #3a86e2;                                        /* mana top highlight      */
+  --poe-es:      #8fb8d6;  --poe-es-rgb:      143, 184, 214;    /* energy shield — pale blue */
+  --poe-spirit:  #e6c770;  --poe-spirit-rgb:  230, 199, 112;    /* spirit (PoE2) — gold/cream */
+  --poe-blood:   #7e140e;  --poe-blood-rgb:   126,  20,  14;    /* dried blood / sacrifice */
+
+  /* ── ITEM RARITY — CONFIRMED game-default filter colors. Genre-defining. */
+  --poe-normal:      #c8c8c8;  --poe-normal-rgb: 200, 200, 200; /* normal / white base    */
+  --poe-magic:       #8888ff;  --poe-magic-rgb:  136, 136, 255; /* magic — periwinkle blue */
+  --poe-rare:        #ffff77;  --poe-rare-rgb:   255, 255, 119; /* rare — pale yellow      */
+  --poe-unique:      #af6025;  --poe-unique-rgb: 175,  96,  37; /* unique — THE signature burnt orange */
+  --poe-unique-hi:   #e16400;   /* unique highlight fill                */
+  --poe-gem:         #1ba29b;   /* skill gems — teal                    */
+  --poe-currency:    #aa9e82;   /* currency — warm putty                */
+  --poe-currency-hi: #fa007d;   /* top-tier currency — hot magenta      */
+  --poe-quest:       #4ae63a;   /* quest items — green                  */
+
+  /* ── PASSIVE TREE — the constellation. Cool void + warm gold nodes = the signature
+     warm-on-cool motif. Deliberately cooler/bluer than the warm surfaces. */
+  --poe-void:    #0a0e18;  --poe-void-rgb:    10,  14,  24;    /* tree starfield void     */
+  --poe-void-2:  #141a2a;                                       /* tree void raised        */
+  --poe-nebula:  #2a3550;                                       /* faint cool dust         */
+  --poe-node-on: #e6c16a;  --poe-node-on-rgb: 230, 193, 106;   /* allocated node / line   */
+  --poe-node-off:#4a463e;                                       /* unallocated node        */
+
+  /* ── ATTRIBUTE GEMS — the three socket colors (Str/Dex/Int). */
+  --poe-str: #c8302a;   /* red   — strength   */
+  --poe-dex: #3fa64a;   /* green — dexterity  */
+  --poe-int: #2e6fc8;   /* blue  — intelligence */
+
+  /* ════════════════════════════════════════════════════════════════════════
+     LAYER-NAMESPACED SEMANTIC TOKEN FAMILIES — the token-namespace discipline
+     (color-theory.md §5.7, §12.12). PoE encodes meaning in color across several
+     STRUCTURALLY INDEPENDENT layers that happen to share a palette: "red" is an
+     attribute (Str), an element (Fire), AND a resource (Life); "blue" appears in
+     four layers (Magic / Int / Cold / Mana). So every signal lives under an
+     explicit per-layer namespace — never a global --red / --blue — and the four
+     reds and four blues can never short-circuit into one variable.
+
+     ┌─ THESE ARE FIXED. Each carries a permanent JOB (a rarity, an element, an
+     │  attribute, a resource, a flask). They are IMMUTABLE: never re-hue them,
+     │  never use them as decoration, and NEVER swap them with --accent. An Unique
+     │  is always burnt-orange; Fire is always orange; Str is always red.
+     │
+     └─ --accent (the tarnished gold, §3.10) is the ONE MOVABLE family — the only
+        color free to be "just pretty" and free to be respun per theme. A
+        "Randomize accent" pass must move the accent + all chrome and leave EVERY
+        token below fixed; anything semantic that moves is a bug.
+
+     These alias the raw --poe-* palette constants above so there is ONE source of
+     truth per hue; the namespace is the contract a consumer should bind to.
+     -rgb triples are carried wherever a token is used at partial alpha. */
+
+  /* — RARITY · the genre-defining loot code [C], confirmed filter defaults (§3.5).
+       The ONLY layer read ordinally (a ranked warmth/value scale = power). */
+  --poe-rarity-normal:   var(--poe-normal);    /* #c8c8c8 white base       */
+  --poe-rarity-magic:    var(--poe-magic);     /* #8888ff periwinkle blue  */
+  --poe-rarity-rare:     var(--poe-rare);      /* #ffff77 pale yellow      */
+  --poe-rarity-unique:   var(--poe-unique);    /* #af6025 burnt orange — THE color */
+  --poe-rarity-gem:      var(--poe-gem);       /* #1ba29b teal             */
+  --poe-rarity-currency: var(--poe-currency);  /* #aa9e82 warm putty       */
+  --poe-rarity-quest:    var(--poe-quest);     /* #4ae63a green            */
+
+  /* — ELEMENTS · the saturated VFX punctuation [C·hue], categorical (§3.6). Each
+       carries a two-tone identity: a "damage now" base + an "over-time" ailment tint
+       in the same family. Physical is bone-neutral (mundane, not magic). */
+  --poe-elem-fire:      var(--poe-fire);       /* #ff6a1a warm orange      */
+  --poe-elem-fire-rgb:  var(--poe-fire-rgb);   /* 255,106,26               */
+  --poe-elem-cold:      var(--poe-cold);       /* #7fc8e6 ice cyan         */
+  --poe-elem-cold-rgb:  var(--poe-cold-rgb);   /* 127,200,230              */
+  --poe-elem-lightning:     var(--poe-lightning);      /* #ffe24a electric yellow */
+  --poe-elem-lightning-rgb: var(--poe-lightning-rgb);  /* 255,226,74            */
+  --poe-elem-chaos:     var(--poe-chaos);      /* #b06ae0 corrupt violet   */
+  --poe-elem-chaos-rgb: var(--poe-chaos-rgb);  /* 176,106,224              */
+  --poe-elem-physical:  var(--poe-phys);       /* #c9c2b6 bone neutral — no hue */
+  /* ailment tints — the "over-time" sibling per element (ignite/chill/shock/poison) */
+  --poe-elem-fire-ailment:      var(--poe-ember);     /* #c5400e ignite       */
+  --poe-elem-cold-ailment:      var(--poe-frost);     /* #cfefff chill / freeze */
+  --poe-elem-lightning-ailment: var(--poe-arc);       /* #b98cff shock arc-violet */
+  --poe-elem-chaos-ailment:     var(--poe-toxic);     /* #3fbf6f poison       */
+  --poe-elem-chaos-ailment-rgb: var(--poe-toxic-rgb); /* 63,191,111           */
+  /* physical's ailment is bleed → reuse the resource blood-red (§3.6, §4.1.4) */
+  --poe-elem-physical-ailment:  var(--poe-blood);     /* #7e140e bleed        */
+
+  /* — ATTRIBUTES · the Str/Dex/Int socket triad [C·hue] (§3.9). The additive RGB
+       primary triad — Strength=RED, Dexterity=GREEN, Intelligence=BLUE. */
+  --poe-attr-str: var(--poe-str);   /* #c8302a red   — Life + Armour; melee     */
+  --poe-attr-dex: var(--poe-dex);   /* #3fa64a green — Evasion + Accuracy; bow   */
+  --poe-attr-int: var(--poe-int);   /* #2e6fc8 blue  — Mana + Energy Shield; spells */
+
+  /* — RESOURCES · the HUD orbs [C·hue] (§3.7). The most-looked-at UI in the game;
+       saturated mortal fluids + one gold arcane reservation (Spirit). */
+  --poe-res-life:       var(--poe-life);       /* #b11b1b blood-red orb    */
+  --poe-res-life-rgb:   var(--poe-life-rgb);   /* 177,27,27                */
+  --poe-res-mana:       var(--poe-mana);       /* #1e5fc8 deep-blue orb    */
+  --poe-res-mana-rgb:   var(--poe-mana-rgb);   /* 30,95,200                */
+  --poe-res-es:         var(--poe-es);         /* #8fb8d6 pale-blue energy shield */
+  --poe-res-es-rgb:     var(--poe-es-rgb);     /* 143,184,214              */
+  --poe-res-spirit:     var(--poe-spirit);     /* #e6c770 gold/cream reservation */
+  --poe-res-spirit-rgb: var(--poe-spirit-rgb); /* 230,199,112              */
+
+  /* — FLASKS · the belt [C·hue] (§3.11). The "borrowed-hue" rule: flasks invent
+       ZERO new hues — recovery flasks ARE the orb hues in a bottle, and utility/
+       charm flasks take the colour of the EFFECT they grant (element/ailment layer).
+       The buff owns the colour; the bottle just carries it. */
+  --poe-flask-life:     var(--poe-res-life);   /* #b11b1b same red as the Life orb  */
+  --poe-flask-life-rgb: var(--poe-res-life-rgb);
+  --poe-flask-mana:     var(--poe-res-mana);   /* #1e5fc8 same blue as the Mana orb */
+  --poe-flask-mana-rgb: var(--poe-res-mana-rgb);
+  /* charm / utility bottles borrow the granted effect's hue (element or ailment),
+     so the element layer doubles as the flask layer at no palette cost: */
+  --poe-flask-fire:  var(--poe-elem-fire);     /* fire-resist charm → fire-orange   */
+  --poe-flask-cold:  var(--poe-elem-cold);     /* cold-resist charm → cold-cyan     */
+  --poe-flask-toxic: var(--poe-elem-chaos-ailment); /* anti-poison charm → toxic green */
+  /* ════════════════════════════════════════════════════════════════════════ */
+
+  /* ── METAL GRADIENT — the load-bearing "brushed gold" used on every frame,
+     border, bezel and divider. Top-light so it reads as relief. Recolor per
+     instance via --poe-mtl-a … --poe-mtl-d (e.g. swap to pewter). */
+  --poe-mtl-a: var(--poe-gold-hi);
+  --poe-mtl-b: var(--poe-gold);
+  --poe-mtl-c: var(--poe-bronze);
+  --poe-mtl-d: var(--poe-tarnish);
+  --poe-metal: linear-gradient(160deg,
+    var(--poe-mtl-a) 0%, var(--poe-mtl-b) 34%, var(--poe-mtl-c) 66%, var(--poe-mtl-d) 100%);
+
+  /* ── GRAIN + VIGNETTE — the painterly "nothing is flat" substrate. Grain is a
+     tiled SVG noise data-URI; vignette darkens the frame edges like the game's grade. */
+  --poe-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  --poe-vignette: radial-gradient(120% 120% at 50% 38%,
+    transparent 52%, rgba(0,0,0,0.35) 84%, rgba(0,0,0,0.6) 100%);
+
+  /* ── MOTION — PoE2 is WEIGHTY. Slow, heavy settles; fire flickers; gold breathes.
+     Nothing snaps. All durations scale with --spd and are muted by reduced-motion. */
+  --poe-ease-weight: cubic-bezier(0.22, 1, 0.36, 1);    /* heavy settle / reveal    */
+  --poe-ease-rise:   cubic-bezier(0.4, 0, 0.2, 1);      /* smooth rise / ember      */
+  --poe-ease-flame:  cubic-bezier(0.45, 0.05, 0.55, 0.95); /* organic flicker loop  */
+  --poe-dur-1: calc(200ms / var(--spd, 1));             /* hover / press            */
+  --poe-dur-2: calc(420ms / var(--spd, 1));             /* transition               */
+  --poe-dur-3: calc(820ms / var(--spd, 1));             /* reveal / allocate        */
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   2 · CONTRACT MAP — ui-component-library token set, WRAECLAST ground.
+   Mapping the raw palette onto --accent / --surface-* / --text-* / --status-* / …
+   means the 263 library components reskin into Path of Exile 2 for free, and these
+   tokens also power the poe-* components in this kit.
+   ════════════════════════════════════════════════════════════════════════════ */
+[data-theme="poe2"] {
+  color-scheme: dark;
+
+  /* accent — TARNISHED GOLD is the brand metal. On a gold fill, text must be ink. */
+  --accent:          var(--poe-gold);
+  --accent-rgb:      var(--poe-gold-rgb);
+  --accent-contrast: #1a1206;             /* text/icon ON an accent fill → warm ink */
+  --accent-hover:    var(--poe-gold-hi);
+  --accent-active:   var(--poe-gold-lo);
+  /* forged-metal CTA fill — never a flat gold; top-lit highlight → gold → shadowed edge */
+  --accent-fill:     linear-gradient(160deg, var(--poe-gold-hi) 0%, var(--poe-gold) 64%, var(--poe-gold-lo) 100%);
+  /* segmented sliding thumb = the forged gold plate (not the olive secondary container), so
+     toggling slides a gold color across to the chosen segment; dark ink rides on top for legibility */
+  --seg-thumb-fill:  var(--accent-fill);
+  --seg-thumb-ink:   var(--accent-contrast);
+  --spd: 1;
+
+  /* structural skin axis — PoE flavor: carved ALL-CAPS labels, arcane glows on,
+     ornate gold corner brackets, a forged-octagon CTA, gold-edged strips. */
+  --label-transform:     uppercase;
+  --glow-a:              1;
+  --frame-corner-color:  var(--poe-gold);
+  --cta-clip:            polygon(7px 0, calc(100% - 7px) 0, 100% 7px,
+                          100% calc(100% - 7px), calc(100% - 7px) 100%,
+                          7px 100%, 0 calc(100% - 7px), 0 7px);
+  --strip-accent-border: var(--poe-gold);
+
+  /* surfaces — warm near-black */
+  --bg-color:        var(--poe-bg-0);
+  --canvas-bg:       var(--poe-bg-1);
+  --menu-bg:         var(--poe-bg-0);
+  --input-bg:        var(--poe-bg-3);
+  --surface-1:       var(--poe-bg-1);
+  --surface-2:       var(--poe-bg-2);
+  --surface-3:       var(--poe-bg-3);
+  --surface-overlay: rgba(7, 6, 5, 0.92);
+
+  /* text — warm bone whites, ash for secondary */
+  --fg-color:                   var(--poe-bone);
+  --input-text:                 #e7ddca;
+  --text-primary:               var(--poe-bone);
+  --text-secondary:             var(--poe-ash);
+  --text-muted:                 var(--poe-ash-2);
+  --descrip-text:               var(--poe-ash);
+  --widget-disabled-text-color: var(--poe-dim);
+
+  /* borders + radii — ornate but mostly angular; small radii, metal does the framing */
+  --border-color:     #2c2317;
+  --interface-stroke: #3a2f1e;
+  --radius-1: 2px;
+  --radius-2: 3px;
+  --radius-3: 5px;
+  --radius-4: 8px;
+  --radius-pill: 999px;
+  /* button-shape axis (v1.2.0) — forged, not pill: plain buttons take a small angular
+     corner; CTAs square off (--cta-sharp:0) so the --cta-clip octagon plate reads as the
+     forged metal shape rather than rounded-AND-clipped. (The space ladder, radius-scale and
+     elevation stay inherited from default.css — neutral structural defaults.) */
+  --btn-radius:       var(--radius-2);
+  --btn-radius-press: var(--radius-1);
+  --btn-clip:         var(--cta-clip);   /* forged: ALL buttons get the octagon chamfer, not just CTAs */
+  --cta-sharp:        0;
+  /* pill/chip-shaped controls (segmented, status pill, chips) bevel like the buttons:
+     --pill-radius drops the 999px pill rounding to angular so --pill-clip's octagon actually
+     reads (a rounded pill fits inside the chamfer and hides it). Symmetric with --btn-radius/
+     --btn-clip. Components read var(--pill-radius, --radius-pill) / var(--pill-clip, none) →
+     other themes stay fully rounded. Cut is smaller than --cta-clip since these are smaller. */
+  --pill-radius:      var(--radius-2);
+  --pill-clip:        polygon(5px 0, calc(100% - 5px) 0, 100% 5px, 100% calc(100% - 5px),
+                          calc(100% - 5px) 100%, 5px 100%, 0 calc(100% - 5px), 0 5px);
+
+  /* type — carved-serif display, old-style lore serif, clean UI sans, technical mono */
+  --font-display:   "Cinzel", "Trajan Pro", "Marcellus", "Georgia", serif;
+  --font-editorial: "EB Garamond", "Cormorant", "Georgia", serif;
+  --font-sans:      "Inter", "Source Sans 3", system-ui, sans-serif;
+  --font-mono:      "IBM Plex Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --font-serif: var(--font-editorial);
+  /* shared gx-display voice — PoE's carved caps run open-tracked, near-single leading */
+  --gx-display-tracking: 0.06em;
+  --gx-display-leading: 1.04;
+  --gx-display-xl-size: clamp(2.4rem, 6vw, 5rem);   /* match PoE2's original hero size */
+
+  /* status — mapped to in-world meanings (not random greens/reds) */
+  --status-success: #6cb049;          /* nature / restored        */
+  --status-warning: var(--poe-fire);  /* fire / caution           */
+  --status-danger:  #cc382b;          /* blood / death            */
+  --status-info:    #6fb0dd;          /* cold / arcane info        */
+
+  /* data-type / category palette — the full PoE signal set (elements + rarities +
+     resources), cycled for charts / tags / wires / node ports. */
+  --cat-1:  var(--poe-gold);          /* gold / brand            */
+  --cat-2:  #bf6a2c;                  /* unique orange           */
+  --cat-3:  var(--poe-fire);          /* fire                    */
+  --cat-4:  var(--poe-cold);          /* cold                    */
+  --cat-5:  var(--poe-lightning);     /* lightning               */
+  --cat-6:  var(--poe-chaos);         /* chaos                   */
+  --cat-6-rgb: var(--poe-chaos-rgb);
+  --cat-7:  #cf3b30;                  /* life / blood            */
+  --cat-8:  #3f86e0;                  /* mana                    */
+  --cat-9:  var(--poe-gem);           /* gem teal                */
+  --cat-10: var(--poe-quest);         /* quest green             */
+  --cat-11: var(--poe-toxic);         /* poison                  */
+  --cat-12: var(--poe-currency);      /* currency tan            */
+  --cat-13: var(--poe-magic);         /* magic blue              */
+  --cat-14: var(--poe-rare);          /* rare yellow             */
+  --cat-15: var(--poe-es);            /* energy shield           */
+  --cat-16: var(--poe-spirit);        /* spirit cream            */
+
+  /* "node" surfaces (passive-tree / graph editor chrome) */
+  --node-default-bgcolor:      var(--poe-bg-2);
+  --node-default-boxcolor:     #3a2f1e;
+  --node-default-color:        var(--poe-bg-1);
+  --node-selected-title-color: var(--poe-node-on);
+  --node-title-color:          #cdbfa4;
+  --node-text-color:           var(--poe-ash);
+  --bar-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+
+  /* circular-studies ink ramp — warm void → gold (geometric showpieces) */
+  --cs-1: #0a0908;
+  --cs-2: #2a2113;
+  --cs-3: #6b4e22;
+  --cs-4: var(--poe-gold);
+  --cs-5: var(--poe-gold-hi);
+
+  /* convenience aliases used by this kit's components */
+  --poe-ground-0: var(--poe-bg-0);
+  --poe-ground-1: var(--poe-bg-1);
+  --poe-ground-2: var(--poe-bg-2);
+  --poe-ground-3: var(--poe-bg-3);
+  --poe-line:     var(--border-color);
+  --poe-glow:     0 0 0 1px rgba(var(--poe-gold-rgb), 0.4),
+                  0 0 22px rgba(var(--poe-gold-rgb), 0.28);
+  --poe-glow-soft: 0 0 28px rgba(var(--poe-gold-rgb), 0.18);
+}
+
+/* ── Respect reduced-motion: freeze the embers, sheens, flickers and pulses ───── */
+@media (prefers-reduced-motion: reduce) {
+  [data-theme="poe2"] * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ── M3 token layer: color roles derived from this theme's palette (derive-m3-roles.mjs rules)
+   + the shared M3 constants (motion / shadow / state-layer / typescale / radii) from default.css,
+   so this kit matches the full token contract and the M3 components reskin. ── */
+[data-theme="poe2"] {
+  /* derived M3 color roles */
+  --surface-0: #0f0d0b;
+  --surface-4: #241f19;
+  --accent-container: #503f20;
+  --accent-container-contrast: #efe1c8;
+  --accent-2: #b99a5f;
+  --accent-2-rgb: 185, 154, 95;
+  --accent-2-contrast: #241f15;
+  --accent-2-container: #4b3e28;
+  --accent-2-container-contrast: #eae1cf;
+  --accent-3: #3f86e0;
+  --accent-3-rgb: 63, 134, 224;
+  --accent-3-contrast: #121c28;
+  --accent-3-container: #203756;
+  --accent-3-container-contrast: #c5dbf6;
+  --status-danger-rgb: 204, 56, 43;
+  --status-danger-contrast: #27100d;
+  --status-danger-container: #511c16;
+  --status-danger-container-contrast: #f0c3bf;
+  --status-success-rgb: 108, 176, 73;
+  --status-success-contrast: #192212;
+  --status-success-container: #304621;
+  --status-success-container-contrast: #d3e7c8;
+  --status-warning-rgb: 255, 106, 26;
+  --status-warning-contrast: #2f180b;
+  --status-warning-container: #632e10;
+  --status-warning-container-contrast: #ffd2ba;
+  --status-info-rgb: 111, 176, 221;
+  --status-info-contrast: #192228;
+  --status-info-container: #314655;
+  --status-info-container-contrast: #d4e7f5;
+  --surface-inverse: #ded3bf;
+  --text-inverse: #14110d;
+  --accent-inverse: #9a6f2e;
+  --scrim: #000000;
+  --scrim-rgb: 0, 0, 0;
+  --scrim-a: 0.32;
+  --border-strong: #40372a;
+  /* shared M3 constants (from default) */
+  --state-hover-a: 0.08;
+  --state-focus-a: 0.10;
+  --state-press-a: 0.10;
+  --state-drag-a: 0.16;
+  --type-display-l-size: 57px;
+  --type-display-l-lh: 64px;
+  --type-display-l-weight: 400;
+  --type-display-l-track: -0.25px;
+  --type-display-l-weight-emph: 500;
+  --type-display-m-size: 45px;
+  --type-display-m-lh: 52px;
+  --type-display-m-weight: 400;
+  --type-display-m-track: 0px;
+  --type-display-m-weight-emph: 500;
+  --type-display-s-size: 36px;
+  --type-display-s-lh: 44px;
+  --type-display-s-weight: 400;
+  --type-display-s-track: 0px;
+  --type-display-s-weight-emph: 500;
+  --type-headline-l-size: 32px;
+  --type-headline-l-lh: 40px;
+  --type-headline-l-weight: 400;
+  --type-headline-l-track: 0px;
+  --type-headline-l-weight-emph: 500;
+  --type-headline-m-size: 28px;
+  --type-headline-m-lh: 36px;
+  --type-headline-m-weight: 400;
+  --type-headline-m-track: 0px;
+  --type-headline-m-weight-emph: 500;
+  --type-headline-s-size: 24px;
+  --type-headline-s-lh: 32px;
+  --type-headline-s-weight: 400;
+  --type-headline-s-track: 0px;
+  --type-headline-s-weight-emph: 500;
+  --type-title-l-size: 22px;
+  --type-title-l-lh: 28px;
+  --type-title-l-weight: 400;
+  --type-title-l-track: 0px;
+  --type-title-l-weight-emph: 500;
+  --type-title-m-size: 16px;
+  --type-title-m-lh: 24px;
+  --type-title-m-weight: 500;
+  --type-title-m-track: 0.15px;
+  --type-title-m-weight-emph: 700;
+  --type-title-s-size: 14px;
+  --type-title-s-lh: 20px;
+  --type-title-s-weight: 500;
+  --type-title-s-track: 0.1px;
+  --type-title-s-weight-emph: 700;
+  --type-body-l-size: 16px;
+  --type-body-l-lh: 24px;
+  --type-body-l-weight: 400;
+  --type-body-l-track: 0.5px;
+  --type-body-l-weight-emph: 500;
+  --type-body-m-size: 14px;
+  --type-body-m-lh: 20px;
+  --type-body-m-weight: 400;
+  --type-body-m-track: 0.25px;
+  --type-body-m-weight-emph: 500;
+  --type-body-s-size: 12px;
+  --type-body-s-lh: 16px;
+  --type-body-s-weight: 400;
+  --type-body-s-track: 0.4px;
+  --type-body-s-weight-emph: 500;
+  --type-label-l-size: 14px;
+  --type-label-l-lh: 20px;
+  --type-label-l-weight: 500;
+  --type-label-l-track: 0.1px;
+  --type-label-l-weight-emph: 700;
+  --type-label-m-size: 12px;
+  --type-label-m-lh: 16px;
+  --type-label-m-weight: 500;
+  --type-label-m-track: 0.5px;
+  --type-label-m-weight-emph: 700;
+  --type-label-s-size: 11px;
+  --type-label-s-lh: 16px;
+  --type-label-s-weight: 500;
+  --type-label-s-track: 0.5px;
+  --type-label-s-weight-emph: 700;
+  --radius-0: 0px;
+  --radius-5: 20px;
+  --radius-6: 28px;
+  --radius-7: 32px;
+  --radius-8: 48px;
+  --shadow-rgb: 0, 0, 0;
+  --shadow-0: none;
+  --shadow-1: 0 1px 2px rgba(var(--shadow-rgb), .3), 0 1px 3px 1px rgba(var(--shadow-rgb), .15);
+  --shadow-2: 0 1px 2px rgba(var(--shadow-rgb), .3), 0 2px 6px 2px rgba(var(--shadow-rgb), .15);
+  --shadow-3: 0 1px 3px rgba(var(--shadow-rgb), .3), 0 4px 8px 3px rgba(var(--shadow-rgb), .15);
+  --shadow-4: 0 2px 3px rgba(var(--shadow-rgb), .3), 0 6px 10px 4px rgba(var(--shadow-rgb), .15);
+  --shadow-5: 0 4px 4px rgba(var(--shadow-rgb), .3), 0 8px 12px 6px rgba(var(--shadow-rgb), .15);
+  --motion-spatial-fast-dur: var(--motion-exp-spatial-fast-dur);
+  --motion-spatial-fast-ease: var(--motion-exp-spatial-fast-ease);
+  --motion-spatial-dur: var(--motion-exp-spatial-dur);
+  --motion-spatial-ease: var(--motion-exp-spatial-ease);
+  --motion-spatial-slow-dur: var(--motion-exp-spatial-slow-dur);
+  --motion-spatial-slow-ease: var(--motion-exp-spatial-slow-ease);
+  --motion-effect-fast-dur: var(--motion-exp-effect-fast-dur);
+  --motion-effect-fast-ease: var(--motion-exp-effect-fast-ease);
+  --motion-effect-dur: var(--motion-exp-effect-dur);
+  --motion-effect-ease: var(--motion-exp-effect-ease);
+  --motion-effect-slow-dur: var(--motion-exp-effect-slow-dur);
+  --motion-effect-slow-ease: var(--motion-exp-effect-slow-ease);
+}

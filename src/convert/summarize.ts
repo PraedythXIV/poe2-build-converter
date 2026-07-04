@@ -3,10 +3,10 @@
 // reuses the same vendored lookups as the converter. `summarizeSafe` swallows decode/parse errors
 // so the live preview can simply hide itself on incomplete input.
 
-import type { PobBuild, PobGem, PobItem, PobSkillGroup } from './types'
+import type { PobBuild, PobGem, PobItem, PobSkillGroup, GrantedSkill, ParsedMod } from './types'
 import { decodePobCode } from './decode'
 import { parsePob } from './parsePob'
-import { ascendancyInfo, canonicalUnique, gemInfo, passiveIdForNode, passiveMeta } from './lookups'
+import { ascendancyInfo, canonicalUnique, gemInfo, isGemName, passiveIdForNode, passiveMeta } from './lookups'
 
 export interface SummaryItem {
   /** PoB slot label, e.g. "Weapon 1", "Body Armour" (or "Jewel" for tree jewels). */
@@ -18,10 +18,42 @@ export interface SummaryItem {
   levelReq: number
   /** Explicit/visible mod lines (rune & craft prefixes already stripped by the parser). */
   mods: string[]
-  /** Socketed rune / soul-core names. */
+  /** Socketed rune / soul-core names (skill-socket "Rune:" lines already reclassified out). */
   runes: string[]
+  /** Skills the item grants (from "Grants Skill:" implicits and sceptre skill sockets). */
+  grantedSkills: GrantedSkill[]
+  // ── lossless extras for the enriched card (read-only; from the PoB item body text) ──
+  itemLevel: number | null
+  quality: number | null
+  socketString: string | null
+  /** Jewel radius keyword (e.g. "Medium") for radius jewels, else null. */
+  radius: string | null
+  /** "Limited to" cap (e.g. "1") for items that carry one, else null. */
+  limitedTo: string | null
+  defences: Record<string, string>
+  flags: string[]
+  /** Explicit mods WITH their source tags ({crafted}/{fractured}/…) — for per-mod badges. */
+  parsedMods: ParsedMod[]
+  /** Implicit mod lines (base/enchant/rune/crafted implicits) WITH tags + resolved rolls — the overlay
+   *  renders these above the explicits. `mods[]` only carries {rune} implicits, so this is the full set. */
+  implicits: ParsedMod[]
   /** Does this survive into the .build? Gear: always. Jewel: only if its socket node resolves. */
   inBuild: boolean
+}
+
+/** One gem in a skill group, with the PoB detail flags surfaced as compact markers on the skills panel. */
+export interface SummaryGem {
+  name: string
+  level: number
+  quality: number
+  /** Corrupted gem (PoB `corrupted="true"`). */
+  corrupted: boolean
+  /** Socketed count — shown as ×N when > 1. */
+  count: number
+  /** Minion id this gem summons (PoB `skillMinion`), when a minion gem (else null). NOTE: we deliberately
+   *  do NOT surface `variantId` — it's an internal per-gem id that just mirrors the name
+   *  ("Hollow Resonance" → "HollowResonance"), so a marker would be redundant noise on every row. */
+  minion: string | null
 }
 
 export interface SummarySkill {
@@ -34,6 +66,8 @@ export interface SummarySkill {
   supports: string[]
   /** True for the build's designated main socket group. */
   isMain: boolean
+  /** Every gem in the group (head first, then supports) with full per-gem detail for the skills panel. */
+  gems: SummaryGem[]
 }
 
 export interface BuildSummary {
@@ -57,6 +91,12 @@ export interface BuildSummary {
   /** Allocated mastery names. */
   masteries: string[]
   passiveCount: number
+  /** PoB's exported calc snapshot (PlayerStat block) — empty record when the export carries none. */
+  playerStats: Record<string, number>
+  /** Raw allocated tree node ids (numeric, as strings) — the id space the tree view uses. */
+  specNodes: string[]
+  /** PoB's internal ascendancy id (e.g. "Monk1") — what the tree view keys clusters on. */
+  ascendancyInternalId: string | null
 }
 
 function gemName(g: PobGem): string {
@@ -75,6 +115,18 @@ function gemName(g: PobGem): string {
 /** A socket group → its emitted skill (the FIRST enabled gem with a gemId, matching mapSkills' choice
  *  of the skills[].id) + the remaining gems as supports. Keeping this in lockstep with the converter
  *  means the unmarked "in the .build" headline names the gem the .build actually stores. */
+/** PoB detail flags for one gem, verbatim — markers the skills panel shows beside the gem name. */
+function toSummaryGem(g: PobGem): SummaryGem {
+  return {
+    name: gemName(g),
+    level: g.level,
+    quality: g.quality,
+    corrupted: g.corrupted === true,
+    count: g.count ?? 1,
+    minion: g.minion?.minion ?? null,
+  }
+}
+
 function summariseGroup(group: PobSkillGroup, isMain: boolean): SummarySkill | null {
   const gems = group.gems.filter((g) => g.enabled !== false && g.gemId)
   if (gems.length === 0) return null
@@ -85,7 +137,49 @@ function summariseGroup(group: PobSkillGroup, isMain: boolean): SummarySkill | n
     quality: head.quality,
     supports: gems.slice(1).map(gemName),
     isMain,
+    gems: gems.map(toSummaryGem),
   }
+}
+
+/** Split an item's raw "Rune:" lines + grant lines into real runes vs granted skills.
+ *  PoB serializes a sceptre's SKILL socket as "Rune: <skill name>" — a rune name that is a known
+ *  gem name is that socketed skill, not a rune (exact name match against the vendored gem table).
+ *  Deduped by name; when the same skill appears with and without a level (skill socket has none,
+ *  the "Grants Skill: Level N" implicit does), the entry that knows its level wins. */
+export function splitRunesAndGrants(item: Pick<PobItem, 'runes' | 'grantedSkills'>): {
+  runes: string[]
+  grantedSkills: GrantedSkill[]
+} {
+  const runes = item.runes.filter((r) => !isGemName(r))
+  const byName = new Map<string, GrantedSkill>()
+  for (const g of [
+    ...item.grantedSkills,
+    ...item.runes.filter((r) => isGemName(r)).map((name) => ({ name, level: null })),
+  ]) {
+    const key = g.name.toLowerCase()
+    const prev = byName.get(key)
+    if (!prev || (prev.level === null && g.level !== null)) byName.set(key, g)
+  }
+  return { runes, grantedSkills: [...byName.values()] }
+}
+
+/** Group socketables for display. PoB labels every socketable "Rune:" but PoE2 has distinct
+ *  categories; the NAME states which one it is ("Soul Core of X", "X Talisman", "X Rune") —
+ *  classification is by that stated name, never guessed. Empty groups are omitted. */
+export function groupSocketables(names: string[]): Array<{ label: string; names: string[] }> {
+  const runes: string[] = []
+  const soulCores: string[] = []
+  const talismans: string[] = []
+  for (const n of names) {
+    if (/^soul core\b/i.test(n)) soulCores.push(n)
+    else if (/\btalisman$/i.test(n)) talismans.push(n)
+    else runes.push(n)
+  }
+  return [
+    { label: 'Runes', names: runes },
+    { label: 'Soul Cores', names: soulCores },
+    { label: 'Talismans', names: talismans },
+  ].filter((g) => g.names.length > 0)
 }
 
 /** Map a PoB item id to a SummaryItem (shared by equipped gear + tree jewels). */
@@ -93,15 +187,50 @@ function toSummaryItem(item: PobItem, slot: string, inBuild = true): SummaryItem
   const rarity = (item.rarity || 'NORMAL').toUpperCase()
   const isUnique = rarity === 'UNIQUE' || rarity === 'RELIC'
   const name = (isUnique ? canonicalUnique(item.name) : undefined) || item.name || item.baseType || '(unknown)'
-  return { slot, rarity, name, baseType: item.baseType, levelReq: item.levelReq, mods: item.mods.slice(), runes: item.runes.slice(), inBuild }
+  const { runes, grantedSkills } = splitRunesAndGrants(item)
+  return {
+    slot,
+    rarity,
+    name,
+    baseType: item.baseType,
+    levelReq: item.levelReq,
+    mods: item.mods.slice(),
+    runes,
+    grantedSkills,
+    itemLevel: item.itemLevel,
+    quality: item.quality,
+    socketString: item.socketString,
+    radius: item.radius,
+    limitedTo: item.limitedTo,
+    // defensively copy so consumers can't mutate the shared PobItem data (matches mods.slice() above)
+    defences: { ...item.defences },
+    flags: item.flags.slice(),
+    parsedMods: item.parsedMods.slice(),
+    implicits: item.implicits.slice(),
+    inBuild,
+  }
 }
 
 /** Sort key for an inventory slot, so items read top-to-bottom like the in-game paper-doll. */
 function slotRank(name: string): number {
   const n = name.toLowerCase()
-  const order = ['weapon 1', 'weapon 2', 'helmet', 'body', 'glove', 'boot', 'belt', 'amulet', 'ring 1', 'ring 2', 'flask', 'charm']
+  const order = [
+    'weapon 1',
+    'weapon 2',
+    'helmet',
+    'body',
+    'glove',
+    'boot',
+    'belt',
+    'amulet',
+    'ring 1',
+    'ring 2',
+    'flask',
+    'charm',
+  ]
+  const swapOffset = n.includes('swap') ? order.length : 0
   for (let i = 0; i < order.length; i++) {
-    if (n.includes(order[i]!)) return i + (n.includes('swap') ? order.length : 0)
+    if (n.includes(order[i]!)) return i + swapOffset
   }
   return order.length * 2
 }
@@ -114,8 +243,7 @@ export function summarizeBuild(pob: PobBuild): BuildSummary {
 
   // ── skills — only real socketed groups (skip tree-/item-granted, as the converter does) ──
   const mainGroupIdx = pob.mainSocketGroup != null ? pob.mainSocketGroup - 1 : -1
-  const mainGroup =
-    mainGroupIdx >= 0 && mainGroupIdx < pob.skillGroups.length ? pob.skillGroups[mainGroupIdx]! : null
+  const mainGroup = mainGroupIdx >= 0 && mainGroupIdx < pob.skillGroups.length ? pob.skillGroups[mainGroupIdx]! : null
   const skills: SummarySkill[] = []
   pob.skillGroups.forEach((g, i) => {
     if (g.enabled === false || g.source) return
@@ -129,14 +257,17 @@ export function summarizeBuild(pob: PobBuild): BuildSummary {
   // ── items — every equipped item, in inventory order, de-duped by item id ──
   const items: SummaryItem[] = []
   const seenItems = new Set<string>()
+  const slotRanks = new Map<string, number>()
   for (const slot of pob.slots) {
     if (!slot.itemId || slot.itemId === '0' || seenItems.has(slot.itemId)) continue
     const item = pob.items.get(slot.itemId)
     if (!item) continue
     seenItems.add(slot.itemId)
+    // compute the sort rank once as each item is added, rather than re-scanning the list afterwards
+    if (!slotRanks.has(slot.name)) slotRanks.set(slot.name, slotRank(slot.name))
     items.push(toSummaryItem(item, slot.name))
   }
-  items.sort((a, b) => slotRank(a.slot) - slotRank(b.slot))
+  items.sort((a, b) => slotRanks.get(a.slot)! - slotRanks.get(b.slot)!)
   const uniqueCount = items.filter((i) => i.rarity === 'UNIQUE' || i.rarity === 'RELIC').length
 
   // ── jewels socketed in the passive tree ──
@@ -184,6 +315,9 @@ export function summarizeBuild(pob: PobBuild): BuildSummary {
     ascNotables: sortNames(ascNotables),
     masteries: sortNames(masteries),
     passiveCount: pob.spec.nodes.length,
+    playerStats: { ...pob.playerStats },
+    specNodes: pob.spec.nodes.slice(),
+    ascendancyInternalId: ascId,
   }
 }
 

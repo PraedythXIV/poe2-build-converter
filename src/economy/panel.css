@@ -1,0 +1,516 @@
+/* B4 — economy panel. Token-driven only (contract from src/styles.css); reuses the
+   .ix-btn button vocabulary. Table follows the project's mono-label / tabular-number
+   conventions rather than introducing a new component. */
+
+.ec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ec-intro {
+  margin: 0;
+  font: 500 12px/1.6 var(--font-sans);
+  color: var(--text-secondary);
+  max-width: 64ch;
+}
+.ec-intro b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ec-lab {
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: var(--label-transform);
+  color: var(--text-secondary);
+}
+
+/* status line — league + snapshot age (or an error) */
+.ec-status {
+  margin: 0;
+  font: 500 11px/1.5 var(--font-mono);
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+.ec-status.err {
+  color: var(--status-danger-text);
+}
+
+/* the Prices table now uses the library .dt-table base (sticky thead, zebra, bordered cells); only the
+   middle vertical-align is kept app-side so the item-icon rows line up. */
+.ec-table td {
+  vertical-align: middle;
+}
+
+/* numeric columns: right-aligned tabular mono so values scan as a column */
+.ec-num {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.ec-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* external icons (poe2scout / GGG CDN) — only present after the user loads prices */
+.ec-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex: none;
+}
+.ec-icon-sm {
+  width: 18px;
+  height: 18px;
+}
+.ec-icon-ph {
+  display: inline-block;
+  background: var(--surface-3);
+  border-radius: var(--radius-1);
+  opacity: 0.4;
+}
+
+/* ── view toggle (Browse / Currency Exchange) — now the library .ix-seg (sliding gold thumb).
+   .ec-views / .ec-viewbtn remain on the markup only as JS hooks (markActive + the click handler). ── */
+
+/* ── browser layout: category sidebar + main table ── */
+/* ── landing: three entry cards (Economy / Currency Exchange / Unique Items) ── */
+.ec-landing {
+  display: grid;
+  gap: var(--space-3);
+  /* min(220px, 100%) so the track can never exceed the container — on a phone the cards collapse to a
+     single full-width column instead of forcing a 220px track that overflows (clipping the right border). */
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+}
+.ec-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+}
+.ec-card-t {
+  margin: 0;
+  font: 600 15px var(--font-sans);
+  color: var(--text-primary);
+}
+.ec-card-d {
+  margin: 0;
+  font: 500 12px/1.5 var(--font-sans);
+  color: var(--text-secondary);
+  flex: 1;
+}
+.ec-enter {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
+/* ── browser shell: a topbar (back · league · view tabs · refresh) over the sidebar+content body ── */
+.ec-app {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  /* fallback cap; wireEconomyPanel() sets an exact px max-height from the panel's live top offset so
+     it fills to the viewport bottom — only the inner sidebar/table scroll, the footer stays on-screen */
+  max-height: 80vh;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+  background: var(--surface-1);
+  overflow: hidden;
+}
+.ec-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  flex-wrap: wrap;
+  padding: var(--space-2) var(--space-2-5);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--surface-1);
+}
+/* .ec-back / .ec-refresh now use the library .ix-btn atom; .ec-refresh keeps only its row positioning. */
+.ec-refresh {
+  margin-left: auto;
+}
+.ec-body {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.ec-side {
+  flex: none;
+  width: 212px;
+  min-height: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border-color);
+  padding: var(--space-2);
+}
+.ec-side-grp + .ec-side-grp {
+  margin-top: var(--space-2-5);
+}
+.ec-side-h {
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-1-5);
+  font: 600 10px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: var(--label-transform);
+  color: var(--text-muted);
+}
+.ec-cat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  font: 500 12px var(--font-sans);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-1);
+  padding: var(--space-1-5) var(--space-1-5);
+  cursor: pointer;
+}
+.ec-cat:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+.ec-cat.on {
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.ec-cat:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.ec-cat-ico {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: none;
+}
+.ec-cat-ph {
+  display: inline-block;
+  background: var(--surface-3);
+  border-radius: var(--radius-1);
+  opacity: 0.4;
+}
+.ec-cat-lbl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* the view fills the body as a column; only the table ROWS scroll (.ec-tbl-scroll), so the pager
+   stays pinned directly below the rows — no content can slide under the footer */
+.ec-main,
+.ec-exchange {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ec-exchange {
+  padding: var(--space-3);
+}
+.ec-tbl-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.ex-head,
+.ex-chart,
+.ex-pairs-bar {
+  flex: none;
+}
+.ex-pairs,
+.ex-pairs-tbl {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+/* skeleton-loading (sk-) + empty/error (es-) wrappers sit in the table area */
+.ec-loading-sk {
+  padding: var(--space-3) var(--space-3-5);
+}
+.ec-state {
+  margin: var(--space-4) auto;
+}
+.ec-empty {
+  padding: var(--space-4-5) var(--space-3);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* rich table cells */
+.ec-nm {
+  display: inline-flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ec-sub {
+  font: 500 10px var(--font-mono);
+  color: var(--text-muted);
+}
+.ec-ex {
+  color: var(--text-primary);
+}
+.ec-div {
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+/* flex lives on an inner wrapper, NOT the <td> — display:flex on a table cell drops it out of the
+   table's row/column layout, which is what made the short sparkline misalign with the other cells */
+.ec-hist-in {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  vertical-align: middle;
+}
+.ec-spark {
+  display: block;
+  flex: none;
+}
+.ec-spark.up,
+.ec-pct.up {
+  color: var(--status-success);
+}
+.ec-spark.down,
+.ec-pct.down {
+  color: var(--status-danger-text);
+}
+.ec-pct {
+  font: 600 11px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.ec-spark-na {
+  color: var(--text-muted);
+}
+.ec-actions {
+  white-space: nowrap;
+}
+.ec-actions a {
+  color: var(--accent);
+  text-decoration: none;
+  font: 500 11px var(--font-mono);
+}
+.ec-actions a + a {
+  margin-left: var(--space-2);
+}
+.ec-actions a:hover {
+  text-decoration: underline;
+}
+
+/* pagination bar (shared by browser + exchange pairs) */
+.ec-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  flex-wrap: wrap;
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-color);
+  background: var(--surface-1);
+}
+.ec-pginfo {
+  font: 500 11px var(--font-mono);
+  color: var(--text-muted);
+  margin-right: auto;
+}
+.ec-rows {
+  font: 500 11px var(--font-mono);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.ec-rows-sel {
+  font: 500 11px var(--font-mono);
+  color: var(--input-text);
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-1);
+  padding: 3px var(--space-1-5);
+  cursor: pointer;
+}
+/* prev/next are the vendored #224 pg- atoms (icb chevrons); .ec-pg remains the JS hook only */
+
+/* ── Currency Exchange view ── */
+.ex-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.ex-title h3 {
+  margin: 0;
+  font: 600 16px var(--font-sans);
+  color: var(--text-primary);
+}
+.ex-sub {
+  font: 500 11px var(--font-mono);
+  color: var(--text-muted);
+}
+.ex-stats {
+  display: flex;
+  gap: var(--space-3-5);
+}
+.ex-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.ex-stat-l {
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: var(--label-transform);
+  color: var(--text-muted);
+}
+.ex-stat-v {
+  font: 600 15px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.ex-chart {
+  margin: 0 0 var(--space-4);
+}
+.ex-chart figcaption {
+  font: 600 9.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: var(--label-transform);
+  color: var(--text-muted);
+  margin-bottom: var(--space-1);
+}
+.ex-chart svg {
+  width: 100%;
+  height: 150px;
+  display: block;
+}
+.ex-cap {
+  stroke: var(--accent);
+}
+.ex-vol rect {
+  fill: var(--accent);
+  opacity: 0.28;
+}
+
+.ex-pairs-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.ex-pairs-bar h4 {
+  margin: 0;
+  font: 600 12px var(--font-sans);
+  color: var(--text-primary);
+}
+.ex-pairs-n {
+  font: 500 11px var(--font-mono);
+  color: var(--text-muted);
+  margin-left: var(--space-1);
+}
+/* the trading-pairs search now uses the library .in-field--search input; keep only its row placement. */
+.ex-pairs-bar .in-field--search {
+  margin-left: auto;
+  min-width: 180px;
+}
+/* the exchange pairs table also uses the library .dt-table base + .dt-sort sortable headers
+   (the old app-side .ex-sortbtn headers were migrated 2026-07-02); the .ex-pair content cells
+   below stay app-side. */
+.ex-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.ex-pair-sep {
+  color: var(--text-muted);
+  margin: 0 var(--space-0-5);
+}
+
+/* current-league label (replaces the old dropdown — only the current non-HC league is shown) */
+.ec-league-name {
+  font: 600 13px var(--font-sans);
+  color: var(--text-primary);
+}
+
+/* base-currency (exalted) icon shown beside the full market-cap / volume numbers */
+.ex-base-ico {
+  width: 16px;
+  height: 16px;
+  vertical-align: -3px;
+}
+.ex-base-ex {
+  font: 600 11px var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* sortable column headers (Trading pair / Volume) — the vendored #220 dt-sort/dt-caret affordance;
+   the inner button supplies the padding, so zero the cell. Specificity (0,2,1) beats the
+   `.dt-table thead th` base (0,1,2) without !important. */
+.ex-table th.ex-th-sort {
+  padding: 0;
+}
+.ex-table th.ex-th-sort .dt-sort {
+  padding: 7px var(--space-2-5);
+}
+
+/* exchange-rate cell: "1 [icon] = N [icon]" */
+.ex-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.ex-rate-ico {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  flex: none;
+}
+.ex-rate-eq {
+  color: var(--text-muted);
+}
+
+/* ── mobile: stack the browser (category sidebar over the table) ─────────────
+   The 212px sidebar + table side-by-side don't fit a phone, so below 640px the body
+   becomes a column: the categories sit in a short scrollable strip above the table
+   (which keeps its own internal scroll), instead of squeezing the table to nothing. */
+@media (max-width: 640px) {
+  .ec-body {
+    flex-direction: column;
+  }
+  .ec-side {
+    width: auto;
+    flex: none;
+    max-height: 34vh;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .ex-head {
+    flex-direction: column;
+    gap: var(--space-2-5);
+  }
+  .ex-search {
+    margin-left: 0;
+    width: 100%;
+  }
+}

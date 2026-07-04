@@ -7,11 +7,12 @@
 // tolerate codes embedded in a share URL (e.g. pobb.in / poe.ninja "pob2/..." links).
 
 import { inflate, inflateRaw } from 'pako'
+import { copy } from '../copy'
 
 export class DecodeError extends Error {}
 
 /** Heuristic: does this input look like already-decoded XML rather than a base64 code? */
-export function looksLikeXml(input: string): boolean {
+function looksLikeXml(input: string): boolean {
   const t = input.trimStart()
   return t.startsWith('<?xml') || t.startsWith('<PathOfBuilding')
 }
@@ -41,7 +42,7 @@ function base64UrlToBytes(b64url: string): Uint8Array {
   try {
     binary = atob(padded)
   } catch {
-    throw new DecodeError('Input is not valid base64 — paste a Path of Building 2 export code, or the decoded XML.')
+    throw new DecodeError(copy.warn.notBase64)
   }
   const bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
@@ -54,7 +55,11 @@ function rootTag(xml: string): string | null {
   return body.match(/^<([A-Za-z0-9]+)[\s>]/)?.[1] ?? null
 }
 
-/** Decode a PoB2 export code to XML. If `input` is already XML, returns it (validated) unchanged. */
+/**
+ * Decode a PoB2 export code to XML. If `input` is already XML, returns it unchanged.
+ * Only the PoB1 root tag is rejected here (with a tailored message); full validation that the
+ * root is `<PathOfBuilding2>` — and that the XML is well-formed — happens in `parsePob`.
+ */
 export function decodePobCode(input: string): string {
   let xml: string
   if (looksLikeXml(input)) {
@@ -63,13 +68,14 @@ export function decodePobCode(input: string): string {
     const bytes = base64UrlToBytes(extractCode(input))
     try {
       // PoB uses a zlib stream (deflate + zlib header); pako.inflate handles that.
-      xml = inflate(bytes, { to: 'string' })
+      // (pako 3 renamed the string-output option `to: 'string'` → `toText: true`.)
+      xml = inflate(bytes, { toText: true })
     } catch {
       try {
         // Fallback for raw-deflate streams.
-        xml = inflateRaw(bytes, { to: 'string' })
+        xml = inflateRaw(bytes, { toText: true })
       } catch {
-        throw new DecodeError('Could not decompress the code. Make sure it is a complete Path of Building 2 export code.')
+        throw new DecodeError(copy.warn.decompressFailed)
       }
     }
     xml = xml.trim()
@@ -77,7 +83,7 @@ export function decodePobCode(input: string): string {
 
   const tag = rootTag(xml)
   if (tag === 'PathOfBuilding') {
-    throw new DecodeError('This looks like a Path of Building 1 (PoE1) code. This tool converts Path of Building 2 (PoE2) builds.')
+    throw new DecodeError(copy.warn.poe1Code)
   }
   return xml
 }

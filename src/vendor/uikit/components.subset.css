@@ -1,0 +1,622 @@
+/* components.subset.css — ui-component-library v1.2.0 components the app adopts (verbatim
+   from css/components.css; single source, re-vendor to update). poe2 skin tuning in styles.css.
+   NOT adopted (kept as app patterns): the app's flush inline `.alert` (renamed off the library's `ts-`
+   Toasts stem; the library Toast/jb- banner is a transient drop-down, not a static warnings chip),
+   itc #311 (deep poe2 rarity fork). */
+
+/* ix-btn — extracted verbatim from ui-component-library/css/components.css
+   "1 — Buttons (M3 Expressive)" banner, lines 53–123. Pristine; re-skinned
+   by the vendored poe2 tokens (vendor/uikit/poe2.css). No @keyframes — the press
+   shape-morph + state layer are transition-driven. */
+
+/* 1 — Buttons (M3 Expressive) */
+/* M3 Expressive button values: 5 container sizes (XS 32 / S 40 — the
+   default — / M 56 / L 96 / XL 136, type ramp label-l → title-m → headline-s →
+   headline-l), round (full corner) + square shapes, content-color state layers,
+   and the Expressive press shape-morph: corners spring between round and square
+   on :active via the corner tokens + the fast spatial spring. Color variants:
+   --primary = filled (accent), --tonal = secondary-container, default =
+   outlined, --ghost = text, --danger tints any of them. THE button atom —
+   consumed by class across the library (modal, toolbar, forms, dialogs…). */
+.ix-btn-wrap { display: flex; flex-wrap: wrap; gap: var(--space-2-5); align-items: center; justify-content: center; max-width: 300px; }
+.ix-btn {
+  position: relative; appearance: none; cursor: pointer; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  flex: 0 0 auto; min-height: 40px; padding: 0 var(--space-4);
+  font: var(--type-label-l-weight) var(--type-label-l-size)/var(--type-label-l-lh) var(--font-sans);
+  letter-spacing: var(--type-label-l-track); text-transform: var(--label-transform);
+  color: var(--accent); background: transparent;
+  border: 1px solid var(--border-strong); border-radius: var(--btn-radius, var(--radius-pill));
+  clip-path: var(--btn-clip, none);
+  transition: background calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              border-color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              border-radius calc(var(--motion-spatial-fast-dur) * var(--spd)) var(--motion-spatial-fast-ease);
+}
+.ix-btn svg { width: 18px; height: 18px; flex: 0 0 auto; }
+/* content-color state layer (covers the border box) */
+.ix-btn::after { content: ""; position: absolute; inset: -1px; border-radius: inherit;
+  pointer-events: none; background: currentColor; opacity: 0;
+  transition: opacity calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease); }
+.ix-btn:hover::after { opacity: var(--state-hover-a); }
+.ix-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ix-btn:focus-visible::after { opacity: var(--state-focus-a); }
+.ix-btn:active::after { opacity: var(--state-press-a); }
+/* color variants */
+.ix-btn--primary { background: var(--accent-fill, var(--accent)); border-color: transparent; color: var(--accent-contrast); }
+.ix-btn--tonal { background: var(--accent-2-container); border-color: transparent; color: var(--accent-2-container-contrast); }
+.ix-btn--ghost { border-color: transparent; padding: 0 var(--space-3); }
+.ix-btn--danger { color: var(--status-danger); }
+.ix-btn--danger.ix-btn--primary { background: var(--status-danger); color: var(--status-danger-contrast); }
+.ix-btn--danger.ix-btn--tonal { background: var(--status-danger-container); color: var(--status-danger-container-contrast); }
+/* toggle buttons — selected = tonal fill */
+.ix-btn[aria-pressed="true"] { background: var(--accent-2-container); border-color: transparent;
+  color: var(--accent-2-container-contrast); }
+/* size ramp (XS / S default / M / L / XL) */
+.ix-btn--xs { min-height: 32px; padding: 0 var(--space-3); gap: var(--space-1-5); }
+.ix-btn--xs svg { width: 16px; height: 16px; }
+.ix-btn--md { min-height: 56px; padding: 0 var(--space-5); gap: var(--space-2-5);
+  font: var(--type-title-m-weight) var(--type-title-m-size)/var(--type-title-m-lh) var(--font-sans);
+  letter-spacing: var(--type-title-m-track); }
+.ix-btn--md svg { width: 24px; height: 24px; }
+.ix-btn--lg { min-height: 96px; padding: 0 var(--space-7); gap: var(--space-3-5);
+  font: var(--type-headline-s-weight) var(--type-headline-s-size)/var(--type-headline-s-lh) var(--font-sans);
+  letter-spacing: 0; }
+.ix-btn--lg svg { width: 32px; height: 32px; }
+.ix-btn--xl { min-height: 136px; padding: 0 var(--space-8); gap: 18px;
+  font: var(--type-headline-l-weight) var(--type-headline-l-size)/var(--type-headline-l-lh) var(--font-sans);
+  letter-spacing: 0; }
+.ix-btn--xl svg { width: 40px; height: 40px; }
+/* Expressive press shape-morph — round springs toward its square corner… */
+.ix-btn:active { border-radius: var(--btn-radius-press, var(--radius-3)); }
+.ix-btn--md:active { border-radius: var(--radius-4); }
+.ix-btn--lg:active, .ix-btn--xl:active { border-radius: var(--radius-6); }
+/* …and the square shape springs the opposite way (square → round) */
+.ix-btn--square { border-radius: var(--radius-3); }
+.ix-btn--md.ix-btn--square { border-radius: var(--radius-4); }
+.ix-btn--lg.ix-btn--square, .ix-btn--xl.ix-btn--square { border-radius: var(--radius-6); }
+.ix-btn--square:active { border-radius: var(--radius-pill); }
+/* disabled — single source of truth stays --widget-disabled-text-color */
+.ix-btn[disabled] { color: var(--widget-disabled-text-color); background: var(--surface-2);
+  border-color: var(--interface-stroke); cursor: not-allowed; }
+.ix-btn[disabled]::after { display: none; }
+
+/* ix-seg — extracted from ui-component-library/css/components.css
+   "4 — Segmented (M3 segmented button group) *​/" banner, lines 238–274.
+   .ix-seg shell + .ix-seg-thumb sliding fill + button states; the optional leading
+   .ix-seg-check slot is TRIMMED OFF (unused). No @keyframes (transition-driven). v1.2.0 M3. */
+
+/* 4 — Segmented (M3 segmented button group) */
+/* THE segmented control: 40px full-corner outlined shell, equal-width segments
+   with hairline dividers, and a sliding selected fill (= secondary-container)
+   that rides the default spatial spring. Selected label gains the emphasized
+   weight. Per-instance --i/--n inline; works with .on, aria-checked or aria-pressed.
+   Other composites' twins (flt-/pt-/ni-/tk-ampm) re-point at Stage 2. */
+.ix-seg { position: relative; display: inline-flex; isolation: isolate; max-width: 100%;
+  height: 40px; box-sizing: border-box; background: transparent;
+  border: 1px solid var(--border-strong); border-radius: var(--pill-radius, var(--radius-pill)); padding: 0;
+  clip-path: var(--pill-clip, none); }
+.ix-seg-thumb { position: absolute; z-index: 0; top: 0; bottom: 0;
+  inset-inline-start: calc(var(--i) * 100% / var(--n)); width: calc(100% / var(--n)); /* logical → mirrors in RTL */
+  background: var(--seg-thumb-fill, var(--accent-2-container)); border-radius: var(--pill-radius, var(--radius-pill));
+  /* No own --pill-clip on the thumb on purpose: the SHELL's clip-path already clips this
+     descendant, so the thumb's outer end inherits the shell chamfer for free, while its interior
+     edge stays a clean straight line (a chamfer there would notch the divider). */
+  transition: inset-inline-start calc(var(--motion-spatial-dur) * var(--spd)) var(--motion-spatial-ease),
+              background calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); }
+.ix-seg button { position: relative; z-index: 1; flex: 1 1 0; min-width: 0;
+  appearance: none; cursor: pointer; border: 0; background: transparent;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1-5);
+  padding: 0 var(--space-3-5); border-radius: var(--pill-radius, var(--radius-pill)); white-space: nowrap;
+  font: var(--type-label-l-weight) var(--type-label-l-size)/var(--type-label-l-lh) var(--font-sans);
+  letter-spacing: var(--type-label-l-track); text-transform: var(--label-transform);
+  color: var(--text-secondary);
+  transition: color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              font-weight calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); }
+/* hairline divider between segments (sits under the sliding fill) */
+.ix-seg button + button { box-shadow: -1px 0 0 var(--border-strong); }
+.ix-seg button svg { width: 18px; height: 18px; flex: 0 0 auto; }
+.ix-seg button.on, .ix-seg button[aria-checked="true"], .ix-seg button[aria-pressed="true"] {
+  color: var(--seg-thumb-ink, var(--accent-2-container-contrast)); font-weight: var(--type-label-l-weight-emph); }
+.ix-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* (the optional leading .ix-seg-check slot is omitted — no segmented control in the app uses it) */
+
+/* fields — #323 Text input (.in-*), from ui-component-library/css/components.css L12913-12960 */
+.in-col { display: flex; flex-direction: column; gap: 18px; width: 280px; max-width: 100%; }
+.in { display: flex; flex-direction: column; gap: var(--space-1-5); }
+.in-label {
+  font: var(--type-label-m-weight) var(--type-label-m-size)/var(--type-label-m-lh) var(--font-sans);
+  letter-spacing: var(--type-label-m-track);
+  text-transform: var(--label-transform); color: var(--text-secondary); }
+.in-field {
+  position: relative; display: flex; align-items: center; gap: var(--space-3);
+  height: 56px; padding: 0 var(--space-4); box-sizing: border-box; cursor: text;
+  transition: background calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              border-color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              box-shadow calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease); }
+.in-input {
+  flex: 1 1 auto; min-width: 0; appearance: none; border: 0; background: transparent;
+  outline: none; padding: 0;
+  font: var(--type-body-l-weight) var(--type-body-l-size)/var(--type-body-l-lh) var(--font-sans);
+  letter-spacing: var(--type-body-l-track);
+  color: var(--input-text); caret-color: var(--accent); }
+.in-input::placeholder { color: var(--text-muted); }
+.in-ic { flex: 0 0 auto; width: 20px; height: 20px; display: grid; place-items: center;
+  color: var(--text-secondary); }
+.in-ic svg { width: 100%; height: 100%; }
+
+/* filled — surface-container-highest, extra-small top corners, an active
+   indicator line that grows to 2px accent from center on focus */
+.in-field--filled { background: var(--surface-4);
+  border-radius: var(--radius-1) var(--radius-1) 0 0;
+  border-bottom: 1px solid var(--text-secondary); }
+.in-field--filled::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px;
+  height: 2px; background: var(--accent); transform: scaleX(0);
+  transition: transform calc(var(--motion-spatial-fast-dur) * var(--spd)) var(--motion-spatial-fast-ease); }
+.in-field--filled:focus-within::after { transform: scaleX(1); }
+
+/* outlined — 1px outline, extra-small corner, 2px accent outline on focus */
+.in-field--outlined { background: transparent;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-1); }
+.in-field--outlined:hover { border-color: var(--text-secondary); }
+.in-field--outlined:focus-within { border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent); }
+
+/* search — M3 search bar: full corner, surface-container-high, no outline */
+.in-field--search { background: var(--surface-3); border-radius: var(--radius-pill); }
+.in-field--search:focus-within { box-shadow: inset 0 0 0 2px var(--accent),
+  0 0 14px rgba(var(--accent-rgb), calc(0.4 * var(--glow-a))); }
+
+/* trailing clear-X (optional, for in-field--search) — uses the #328 .icb icon-button atom BY CLASS
+   (vendored below); no bespoke chrome here. */
+
+
+/* ui-component-library v1.2.0 — "234 — Stepper / wizard (sx-)" — components.css lines 4560-4662 (verbatim). No @keyframes (transitions only). */
+
+/* 234 — Stepper / wizard (sx-) — library ext (M3 has no stepper) */
+/* MERGE GROUP 2 (Stage 1): #18 Wizard (wz-) folded in here; 18 is now a gap.
+   Horizontal step indicator + vertical variant. (The compact "Step n of m" variant is TRIMMED OFF —
+   unused; it consumed the un-vendored #26 .mt-* meter atom.) M3-rebuilt: node state changes ride the
+   effect pair, the current-node ring pops on the fast spatial spring, labels sit on the label-l/body-s
+   roles. State drives everything off [data-state] / aria-current on each step. */
+
+.sx { container-type: inline-size; width: 100%; display: flex; flex-direction: column; gap: 18px;
+  font-family: var(--font-sans); color: var(--text-primary); }
+
+/* ── horizontal rail ──────────────────────────────────────────────────── */
+.sx-steps { list-style: none; margin: 0; padding: 0; display: grid;
+  grid-template-columns: repeat(var(--n), 1fr); gap: 0; }
+.sx-step { position: relative; display: flex; flex-direction: column; align-items: center;
+  gap: var(--space-2); min-width: 0; padding: 0 var(--space-1); text-align: center; }
+
+/* connector: drawn from the centre of one node to the next; the "done"/"current"
+   step paints an accent fill, upcoming stays muted. ::before reaches LEFT so the
+   first step (no incoming line) simply omits it. */
+.sx-step::before { content: ""; position: absolute; top: 15px; right: 50%; left: -50%;
+  height: 2px; background: var(--surface-3); z-index: 0; }
+.sx-step:first-child::before { display: none; }
+.sx-step[data-state="done"]::before,
+.sx-step[data-state="current"]::before { background: var(--accent); }
+
+.sx-node { position: relative; z-index: 1; width: 32px; height: 32px; flex: 0 0 auto;
+  display: grid; place-items: center; border-radius: var(--radius-pill);
+  background: var(--surface-2); border: 1.5px solid var(--border-strong);
+  color: var(--text-muted); font: 700 12px var(--font-mono); font-variant-numeric: tabular-nums;
+  transition: background calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              border-color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              box-shadow calc(var(--motion-spatial-fast-dur) * var(--spd)) var(--motion-spatial-fast-ease); }
+.sx-step[data-state="done"] .sx-node { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
+.sx-step[data-state="current"] .sx-node { background: var(--surface-1); border-color: var(--accent); color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), calc(0.45 * var(--glow-a))),
+    0 0 12px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a))); }
+.sx-step.sx-step--err[data-state] .sx-node { background: var(--surface-1); border-color: var(--status-danger); color: var(--status-danger); box-shadow: none; }
+
+/* check mark (done) — pure CSS tick, no glyph dependency */
+.sx-node .sx-check { width: 13px; height: 13px; display: none; }
+.sx-step[data-state="done"] .sx-node .sx-num { display: none; }
+.sx-step[data-state="done"] .sx-node .sx-check { display: block; }
+.sx-check { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.sx-label { font: var(--type-label-l-weight) var(--type-label-l-size)/1.25 var(--font-sans);
+  letter-spacing: var(--type-label-l-track);
+  text-transform: var(--label-transform); color: var(--text-secondary);
+  transition: color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease);
+  overflow-wrap: anywhere; }
+.sx-step[data-state="done"] .sx-label { color: var(--text-primary); }
+.sx-step[data-state="current"] .sx-label { color: var(--text-primary); font-weight: var(--type-label-l-weight-emph); }
+.sx-step.sx-step--err .sx-label { color: var(--status-danger); }
+.sx-sub { font: var(--type-body-s-weight) var(--type-body-s-size)/1.3 var(--font-sans);
+  letter-spacing: var(--type-body-s-track); color: var(--text-muted); overflow-wrap: anywhere; }
+
+/* keep: upcoming steps are not yet reachable — an intentional DISABLED affordance
+   (incl. the .sx-step--err upcoming step). WCAG 1.4.3 exempts inactive/disabled UI
+   components from the contrast minimum; the 0.7 opacity is the disabled cue. */
+.sx-step[data-state="upcoming"] .sx-node { opacity: 0.7; }   /* non-text: opacity OK */
+/* upcoming LABEL stays readable (AA) via a token color, not opacity; err steps keep danger */
+.sx-step[data-state="upcoming"]:not(.sx-step--err) .sx-label { color: var(--text-secondary); }
+
+/* keyboard/click affordance when steps are buttons/links */
+.sx-step a, .sx-step button { all: unset; display: contents; cursor: pointer; }
+.sx-step :is(a, button):focus-visible .sx-node { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* (the compact "Step n of m" variant .sx-compact* is omitted — unused, and it referenced the
+   un-vendored #26 .mt-* meter atom; vendor #26 + restore this block if the compact stepper is needed.) */
+
+/* ── vertical variant ─────────────────────────────────────────────────── */
+.sx-vert { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; grid-template-columns: none; }
+.sx-vert .sx-step { flex-direction: row; align-items: flex-start; gap: var(--space-3); text-align: left;
+  padding: 0 0 18px; }
+.sx-vert .sx-step:last-child { padding-bottom: 0; }
+/* vertical connector runs DOWN from each node to the next */
+.sx-vert .sx-step::before { content: ""; top: 32px; bottom: -2px; left: 15px; right: auto;
+  width: 2px; height: auto; }
+.sx-vert .sx-step:last-child::before { display: none; }
+.sx-vert .sx-step:first-child::before { display: block; }
+.sx-vert .sx-copy { display: flex; flex-direction: column; gap: 3px; padding-top: 5px; min-width: 0; }
+
+/* ── container collapse: tight cards hide labels, keep nodes + connectors ── */
+@container (max-width: 360px) {
+  .sx-steps:not(.sx-vert) .sx-label, .sx-steps:not(.sx-vert) .sx-sub { position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  /* vertical sublabels can wrap; trim node ring glow bleed in tiny cards */
+  .sx-vert .sx-sub { font-size: 9.5px; }
+}
+
+/* fb-pill — Status pill (#37) — verbatim from ui-component-library css/components.css
+   lines 948-974 (component block) + line 694 (@keyframes el-pulse, referenced by the
+   running state). M3 status chip on the Stage-0 STATUS CONTAINER roles. Do not edit;
+   re-skin via the vendored poe2 tokens only. */
+
+/* 37 — Status pill (fb-) — status-colored chip (library extension on M3 chips) */
+/* M3 chip anatomy (32px, label-l) on the Stage-0 STATUS CONTAINER roles:
+   each state = an opaque --status-*-container fill + its -container-contrast
+   text, with the raw status hue on the leading glyph dot. Idle stays neutral
+   on the surface ladder; running pulses (accent container). */
+.fb-pill-wrap { display: flex; gap: var(--space-2-5); flex-wrap: wrap; align-items: center; justify-content: center; }
+.fb-pill { display: inline-flex; align-items: center; gap: var(--space-2); height: 32px; box-sizing: border-box;
+  padding: 0 var(--space-3-5); border-radius: var(--pill-radius, var(--radius-pill)); border: 1px solid transparent;
+  clip-path: var(--pill-clip, none);
+  font: var(--type-label-l-weight) var(--type-label-l-size)/1 var(--font-sans);
+  letter-spacing: var(--type-label-l-track); text-transform: var(--label-transform);
+  transition: color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              background calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              border-color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); }
+.fb-pill-glyph { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto;
+  transition: background calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              box-shadow calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); }
+.fb-pill[data-state="idle"] { color: var(--text-secondary); background: var(--surface-3); }
+.fb-pill[data-state="idle"] .fb-pill-glyph { background: var(--text-muted); }
+.fb-pill[data-state="queued"] { color: var(--status-info-container-contrast); background: var(--status-info-container); }
+.fb-pill[data-state="queued"] .fb-pill-glyph { background: var(--status-info); }
+.fb-pill[data-state="running"] { color: var(--accent-container-contrast); background: var(--accent-container); }
+.fb-pill[data-state="running"] .fb-pill-glyph { background: var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), var(--glow-a)); animation: el-pulse calc(1s * var(--spd)) ease-in-out infinite; }
+.fb-pill[data-state="done"] { color: var(--status-success-container-contrast); background: var(--status-success-container); }
+.fb-pill[data-state="done"] .fb-pill-glyph { background: var(--status-success); }
+.fb-pill[data-state="error"] { color: var(--status-danger-container-contrast); background: var(--status-danger-container); }
+.fb-pill[data-state="error"] .fb-pill-glyph { background: var(--status-danger); }
+
+/* @keyframes el-pulse — referenced by the running glyph above; sourced from
+   components.css line 694 (shared with #25 elapsed-timer). Not otherwise defined
+   in the vendored poe2 CSS, so it must travel with this component. */
+@keyframes el-pulse { 50% { opacity: 0.3; } }
+
+/* dz-zone — extracted verbatim from ui-component-library/css/components.css
+   "29 — drop chip *​/" banner, lines 801–816 (.dz-zone subset only; the
+   sibling .dz-wrap / .dz-file chip rules from the same banner are NOT used by
+   the poe2 app and are intentionally omitted). v1.2.0 M3. */
+
+.dz-zone { position: relative; width: min(320px, 100%); height: 96px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2);
+  border: 1.5px dashed var(--border-color); border-radius: var(--radius-3); background: var(--surface-1); cursor: pointer;
+  transition: border-color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease),
+              background calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); overflow: hidden; }
+.dz-zone-ic { width: 26px; height: 26px; border-radius: var(--radius-2); border: 2px solid var(--text-muted); position: relative;
+  transition: border-color calc(var(--motion-effect-dur) * var(--spd)) var(--motion-effect-ease); }
+.dz-zone-ic::after { content: ""; position: absolute; left: 50%; top: 50%; width: 2px; height: 12px; background: var(--text-muted); transform: translate(-50%,-50%); }
+.dz-zone-ic::before { content: ""; position: absolute; left: 50%; top: 50%; width: 12px; height: 2px; background: var(--text-muted); transform: translate(-50%,-50%); }
+.dz-zone-txt { font: var(--type-label-s-weight) var(--type-label-s-size)/var(--type-label-s-lh) var(--font-mono);
+  letter-spacing: var(--type-label-s-track); color: var(--text-secondary); }
+.dz-zone.over { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.06); animation: dz-pulse calc(0.9s * var(--spd)) ease-in-out infinite; /* keep: drag-over breathing cycle = intrinsic visual rhythm */ }
+.dz-zone.over .dz-zone-ic { border-color: var(--accent); }
+.dz-zone.over .dz-zone-ic::after, .dz-zone.over .dz-zone-ic::before { background: var(--accent); }
+@keyframes dz-pulse { 50% { border-color: rgba(var(--accent-rgb), 0.4); } }
+.dz-zone.done { border-style: solid; border-color: var(--status-success); }
+.dz-zone.done .dz-zone-txt { color: var(--status-success); }
+
+/* tb- — extracted verbatim from ui-component-library/css/components.css
+   "22 — Tab underline (tb-) — M3 primary tabs", lines 642–671. The top-level section nav
+   (Convert / Atlas / Prices / FAQ): a 48px tab row with a content-color state layer and a 3px
+   accent indicator that SLIDES between tabs (transform/width positioned by moveNavUnderline()
+   in main.ts). Re-skinned by the vendored poe2 tokens. */
+
+/* 22 — Tab underline (tb-) — M3 primary tabs */
+.tb-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--space-4); width: min(420px, 100%); padding: 0 var(--space-4-5); }
+.tb-bar { position: relative; display: flex; border-bottom: 1px solid var(--border-color); width: 100%; }
+.tb-tab { position: relative; appearance: none; cursor: pointer; border: 0; background: transparent;
+  height: 48px; padding: 0 var(--space-4); box-sizing: border-box; white-space: nowrap;
+  font: var(--type-label-l-weight) var(--type-label-l-size)/var(--type-label-l-lh) var(--font-sans);
+  letter-spacing: var(--type-label-l-track); text-transform: var(--label-transform);
+  color: var(--text-secondary);
+  transition: color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease); }
+/* content-color state layer */
+.tb-tab::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: currentColor; opacity: 0;
+  transition: opacity calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease); }
+.tb-tab:hover { color: var(--text-primary); }
+.tb-tab:hover::after { opacity: var(--state-hover-a); }
+.tb-tab:active::after { opacity: var(--state-press-a); }
+.tb-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tb-tab:focus-visible::after { opacity: var(--state-focus-a); }
+.tb-tab.on, .tb-tab[aria-selected="true"] { color: var(--accent); font-weight: var(--type-label-l-weight-emph); }
+/* sliding active indicator — 3px, round top corners, spatial spring. COMPOSITED: animates transform
+   ONLY (translateX slides, scaleX sizes) off a fixed 100px base, so the indicator never triggers layout
+   (no Lighthouse non-composited-animation flag). moveNavUnderline() sets scaleX = targetTabWidth / 100. */
+.tb-underline { position: absolute; bottom: -1px; left: 0; height: 3px; width: 100px; background: var(--accent);
+  border-radius: var(--radius-1) var(--radius-1) 0 0;
+  transform-origin: left center; transform: scaleX(0);
+  transition: transform calc(var(--motion-spatial-dur) * var(--spd)) var(--motion-spatial-ease); }
+.tb-pane { font: var(--type-body-m-weight) var(--type-body-m-size)/var(--type-body-m-lh) var(--font-sans);
+  letter-spacing: var(--type-body-m-track); color: var(--text-secondary); }
+
+/* 243 — Banner / announcement (bn-) — ported from ui-component-library #243, trimmed to the success +
+   warning variants the app uses (no inline-link / dismiss-× / promo / sticky). Persistent status banner:
+   leading hued icon, message body, trailing action. Drives the live PoB file-watch status banner. */
+.bn { container-type: inline-size; position: relative; box-sizing: border-box; width: 100%;
+  display: flex; align-items: center; gap: var(--space-3-5);
+  padding: 11px 14px 11px var(--space-4); font-family: var(--font-sans); color: var(--text-primary);
+  --bn-c: var(--status-info); --bn-c-rgb: var(--status-info-rgb);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--bn-c) 14%, var(--surface-2)), var(--surface-2) 64%);
+  border: 1px solid var(--border-color); border-left: 3px solid var(--bn-c); border-radius: var(--radius-2);
+  overflow: hidden; }
+.bn::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(var(--bn-c-rgb), calc(0.7 * var(--glow-a))), transparent); }
+.bn-icon { flex: 0 0 auto; display: grid; place-items: center; width: 30px; height: 30px;
+  border-radius: var(--radius-2); color: var(--bn-c);
+  background: color-mix(in srgb, var(--bn-c) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--bn-c) 38%, transparent),
+              0 0 12px rgba(var(--bn-c-rgb), calc(0.4 * var(--glow-a))); }
+.bn-icon svg { width: 17px; height: 17px; display: block; }
+.bn-body { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline;
+  gap: var(--space-1) var(--space-2); }
+.bn-title { font: 700 12.5px/1.3 var(--font-sans); letter-spacing: 0.04em;
+  text-transform: var(--label-transform); color: var(--text-primary); }
+.bn-file { font: 600 12.5px/1.45 var(--font-sans); color: var(--text-primary);
+  min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bn-text { font: 500 12px/1.45 var(--font-sans); color: var(--text-secondary); }
+.bn-actions { flex: 0 0 auto; display: inline-flex; align-items: center; gap: var(--space-2); }
+.bn--success { --bn-c: var(--status-success); --bn-c-rgb: var(--status-success-rgb); }
+.bn--warning { --bn-c: var(--status-warning); --bn-c-rgb: var(--status-warning-rgb); }
+@container (max-width: 460px) {
+  .bn { flex-wrap: wrap; }
+  .bn-body { flex: 1 1 auto; order: 2; }
+  .bn-actions { order: 3; flex: 1 1 100%; justify-content: flex-end; }
+  .bn-icon { order: 1; }
+}
+
+/* 43 — Conic spinner (ld-conic) — ported from ui-component-library #43. M3 circular indeterminate:
+   one conic-gradient ring (accent) masked to a ~4px stroke (proportional, so size overrides keep a
+   correct ring), rotating. Drives the converter loader. */
+.ld-conic { width: 48px; height: 48px; border-radius: 50%;
+  background: conic-gradient(var(--accent), rgba(var(--accent-rgb), 0.04) 75%, transparent);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px));
+          mask: radial-gradient(closest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px));
+  animation: ld-spin calc(0.9s * var(--spd)) linear infinite; }
+@keyframes ld-spin { to { transform: rotate(360deg); } }
+
+/* 328 — Icon button (icb-) — extracted from ui-component-library/css/components.css "328 — Icon button",
+   lines 13202–13254 (M3 Expressive icon buttons; the .icb-row demo wrapper is omitted — unused). THE
+   icon-only button incl. the close-✕ / clear glyph: round 40 default / --xs 32 / --md 56, gated state
+   layer, accent focus ring, --filled/--tonal/--outline + aria-pressed toggle. Replaces the app's bespoke
+   .hd-iconbtn / .idm-close / .am-close / .var-up|down|remove glyph buttons — look + accessible-name slot
+   baked in; the app classes are kept only for layout/JS hooks. */
+.icb {
+  position: relative; appearance: none; cursor: pointer; box-sizing: border-box;
+  flex: 0 0 auto; width: 40px; height: 40px; padding: 0;
+  display: inline-grid; place-items: center;
+  color: var(--text-secondary); background: transparent;
+  border: 0; border-radius: var(--radius-pill);
+  transition: background calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              border-color calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease),
+              border-radius calc(var(--motion-spatial-fast-dur) * var(--spd)) var(--motion-spatial-fast-ease); }
+.icb svg { width: 20px; height: 20px; display: block; }
+/* content-color state layer */
+.icb::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: currentColor; opacity: 0;
+  transition: opacity calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease); }
+.icb:hover::after { opacity: var(--state-hover-a); }
+.icb:active::after { opacity: var(--state-press-a); }
+.icb:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.icb:focus-visible::after { opacity: var(--state-focus-a); }
+.icb:hover { color: var(--text-primary); }
+/* sizes (icon 16 / 20 / 24) */
+.icb--xs { width: 32px; height: 32px; }
+.icb--xs svg { width: 16px; height: 16px; }
+.icb--md { width: 56px; height: 56px; }
+.icb--md svg { width: 24px; height: 24px; }
+/* color variants */
+.icb--filled { background: var(--accent); color: var(--accent-contrast); }
+.icb--filled:hover { color: var(--accent-contrast); }
+.icb--tonal { background: var(--accent-2-container); color: var(--accent-2-container-contrast); }
+.icb--tonal:hover { color: var(--accent-2-container-contrast); }
+.icb--outline { border: 1px solid var(--border-strong); }
+.icb--outline::after { inset: -1px; }
+/* toggle — selected = tonal fill */
+.icb[aria-pressed="true"] { background: var(--accent-2-container); color: var(--accent-2-container-contrast); border-color: transparent; }
+/* Expressive press shape-morph: round → square corner, square → round */
+.icb:active { border-radius: var(--radius-3); }
+.icb--md:active { border-radius: var(--radius-4); }
+.icb--square { border-radius: var(--radius-3); }
+.icb--md.icb--square { border-radius: var(--radius-4); }
+.icb--square:active { border-radius: var(--radius-pill); }
+/* disabled */
+.icb[disabled] { color: var(--widget-disabled-text-color); background: transparent; cursor: not-allowed; }
+.icb--filled[disabled], .icb--tonal[disabled] { background: var(--surface-2); }
+.icb[disabled]::after { display: none; }
+
+/* 220 — Data table (dt-) — TABLE SUBSET from ui-component-library/css/components.css "220 — Data table",
+   lines 2983–3075. Only the static-table styling the Prices/exchange panels use (sticky thead, zebra body,
+   bordered cells). The dt- toolbar / select-all checkbox (cx) / status cell (sdt) / footer pager are OMITTED
+   — they need un-vendored atoms and the economy panel has its own toolbar + prev/next pager + ex-sortbtn
+   sort. Applied as `class="dt-table ec-table|ex-table"`, so the app classes keep their content-cell styling
+   + JS sort hooks. */
+.dt-table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+.dt-table thead th { position: sticky; top: 0; z-index: 2; background: var(--surface-3); padding: 9px var(--space-3-5); text-align: left; font: 600 10px var(--font-sans); letter-spacing: 0.1em; text-transform: var(--label-transform); color: var(--text-secondary); border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+.dt-table tbody td { padding: var(--space-2-5) var(--space-3-5); font: 500 12px var(--font-sans); color: var(--text-primary); border-bottom: 1px solid var(--interface-stroke); white-space: nowrap; }
+.dt-table tbody tr:nth-child(even) td { background: var(--surface-2); }
+.dt-table tbody tr:hover td { background: var(--surface-3); }
+.dt-table tbody tr:last-child td { border-bottom: 0; }
+
+/* 13 — Skeleton rows (ld/sk-) — extracted verbatim from ui-component-library/css/components.css
+   "13 — Skeleton rows", lines 466–480. Placeholder "bones" + shimmer sweep for the Prices loading state
+   (replaces the bare "Loading…" text). Self-contained; no extra atoms. */
+.sk-list { display: flex; flex-direction: column; gap: var(--space-2); width: 100%; max-width: 280px; }
+.sk-row { position: relative; display: flex; align-items: center; gap: var(--space-2-5); padding: 9px var(--space-2-5);
+  background: var(--surface-1); border: 1px solid var(--interface-stroke); border-radius: var(--radius-2); overflow: hidden; }
+.sk-row::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
+  transform: translateX(-100%); animation: sk-sweep calc(1.6s * var(--spd)) linear infinite; }
+@keyframes sk-sweep { to { transform: translateX(100%); } }
+.sk-ico { width: 22px; height: 22px; border-radius: var(--radius-1); background: var(--surface-4); flex: 0 0 auto; }
+.sk-line { height: 9px; border-radius: var(--radius-pill); background: var(--surface-4); }
+.sk-badge { width: 30px; height: 14px; border-radius: var(--radius-pill); background: var(--surface-4); margin-left: auto; flex: 0 0 auto; }
+
+/* 235 — Empty state (es-) — extracted verbatim from ui-component-library/css/components.css
+   "235 — Empty state", lines 4671–4812. Glyph + title + muted description + optional CTAs; status variants
+   (--results warning / --error danger / --nodata info) retint the whole block. Drives the Prices empty +
+   load-error states (replaces the bare <p> text). Actions use the vendored .ix-btn atoms. */
+.es { container-type: inline-size; --es-tint: var(--accent); --es-tint-rgb: var(--accent-rgb);
+  position: relative; display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: var(--space-3-5); width: 100%; max-width: 360px; margin-inline: auto; padding: var(--space-6) 28px;
+  background: var(--surface-1); border: 1px solid var(--border-color); border-radius: var(--radius-4); }
+.es::before, .es::after { content: ""; position: absolute; width: 12px; height: 12px;
+  border: 1.5px solid var(--frame-corner-color); pointer-events: none; }
+.es::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
+.es::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+.es-glyph { position: relative; display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%;
+  color: var(--es-tint);
+  background: radial-gradient(circle at 50% 42%, rgba(var(--es-tint-rgb), 0.16), rgba(var(--es-tint-rgb), 0.04) 60%, transparent 72%), var(--surface-2);
+  border: 1px solid var(--interface-stroke);
+  box-shadow: 0 0 0 1px rgba(var(--es-tint-rgb), calc(0.5 * var(--glow-a))), 0 0 22px rgba(var(--es-tint-rgb), calc(0.4 * var(--glow-a))); }
+.es-glyph::after { content: ""; position: absolute; inset: -7px; border-radius: 50%;
+  border: 1px solid rgba(var(--es-tint-rgb), 0.28); animation: es-ring calc(3.2s * var(--spd)) ease-in-out infinite; }
+@keyframes es-ring { 0%, 100% { transform: scale(1); opacity: 0.55; } 50% { transform: scale(1.09); opacity: 0.15; } }
+@media (prefers-reduced-motion: reduce) { .es-glyph::after { animation: none; } }
+.es-glyph svg { width: 34px; height: 34px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.es-title { margin: 0; font: 700 16px var(--font-sans); letter-spacing: 0.01em; text-transform: var(--label-transform); color: var(--text-primary); }
+.es-desc { margin: -4px 0 0; width: 100%; max-width: 32ch; overflow-wrap: anywhere; font: 400 13px/1.5 var(--font-sans); color: var(--text-muted); }
+.es-acts { display: flex; flex-wrap: wrap; gap: var(--space-2-5); justify-content: center; margin-top: var(--space-1); }
+.es .ix-btn--primary { background: var(--es-tint); border-color: var(--es-tint); }
+.es--nodata { --es-tint: var(--status-info); --es-tint-rgb: var(--status-info-rgb); }
+.es--error { --es-tint: var(--status-danger); --es-tint-rgb: var(--status-danger-rgb); }
+.es--results { --es-tint: var(--status-warning); --es-tint-rgb: var(--status-warning-rgb); }
+@container (max-width: 320px) {
+  .es { padding: 22px var(--space-3-5); gap: var(--space-3); }
+  .es-glyph { width: 60px; height: 60px; }
+  .es-glyph svg { width: 28px; height: 28px; }
+  .es-title { font-size: 15px; }
+  .es-desc { font-size: 12px; }
+  .es-acts { flex-direction: column; align-self: stretch; }
+  .es-acts .ix-btn { width: 100%; justify-content: center; }
+  .es::before, .es::after { display: none; }
+}
+
+/* ═══ vendored 2026-07-02 — uikit-reuse migration (verbatim from ui-component-library css/components.css; see scripts/check-uikit.mjs backlog) ═══ */
+
+/* #220 Data table — sortable-header affordance (dt-sort/dt-caret); the dt- base is vendored above */
+.dt-table thead th[aria-sort] { cursor: pointer; }
+.dt-sort { appearance: none; cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-1-5); width: 100%; padding: 0; font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: transparent; border: 0; }
+.dt-num .dt-sort { justify-content: flex-end; }
+.dt-sort:hover { color: var(--text-primary); }
+.dt-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-1); }
+/* sort caret — neutral chevron, accent only on the active column */
+.dt-caret { width: 7px; height: 7px; flex: 0 0 auto; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; opacity: 0.4; transform: rotate(45deg) translateY(-1px); transition: transform 0.16s ease, opacity 0.16s ease; }
+.dt-table thead th[aria-sort="ascending"] .dt-caret { opacity: 1; transform: rotate(-135deg) translateY(-1px); }
+.dt-table thead th[aria-sort="descending"] .dt-caret { opacity: 1; transform: rotate(45deg) translateY(-1px); }
+.dt-table thead th[aria-sort="ascending"] .dt-sort,
+.dt-table thead th[aria-sort="descending"] .dt-sort { color: var(--accent); }
+
+/* #224 Pagination (pg-) — prev/next = #328 .icb atoms; status label. (pg-size/sl- variant not adopted: native selects kept.) */
+.pg {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3-5);
+  font: 500 12px var(--font-sans); color: var(--text-secondary);
+}
+
+/* ── the row of controls ─────────────────────────────────────────────── */
+.pg-list {
+  display: inline-flex; align-items: center; gap: var(--space-1);
+  list-style: none; margin: 0; padding: 0;
+}
+
+/* numbered page buttons — #1 .ix-btn--square atoms, squared to a 32px cell */
+.pg-btn.ix-btn { min-height: 32px; min-width: 32px; padding: 0 var(--space-1-5);
+  font: var(--type-label-l-weight) var(--type-label-l-size)/1 var(--font-mono);
+  color: var(--text-secondary); }
+.pg-btn.ix-btn:hover { color: var(--text-primary); }
+/* active page — primary fill (the atom carries no aria-current style) */
+.pg-btn.ix-btn[aria-current="page"] {
+  background: var(--accent); color: var(--accent-contrast);
+  border-color: transparent; cursor: default; }
+
+/* ellipsis gap for long ranges — inert, hidden from AT */
+.pg-gap { display: inline-flex; align-items: center; justify-content: center;
+  min-width: 32px; height: 32px;
+  font: 600 12px var(--font-mono); color: var(--text-muted); letter-spacing: 0.12em; user-select: none; }
+
+/* ── "Page X of Y" label ─────────────────────────────────────────────── */
+.pg-status {
+  font: 600 10px var(--font-mono); letter-spacing: 0.08em;
+  text-transform: var(--label-transform); color: var(--text-muted);
+}
+.pg-status b { color: var(--text-primary); font-weight: 700; }
+
+/* #248 Number stepper (ns-) — assembles the vendored .in-field/.in-input/.icb */
+/* 248 — Number stepper (ns-) — assembles #323 field shell (.in-field outlined +
+   .in-input) hosting two #328 .icb stepper buttons; only the [ − | value | + ]
+   grid + unit suffix + clamping/disabled chrome is bespoke. role=spinbutton with
+   aria-valuenow/min/max; container-responsive so it never clips its card. */
+
+.ns { container-type: inline-size; display: flex; flex-direction: column; gap: var(--space-4); width: 100%; max-width: 320px; }
+
+.ns-field { display: flex; flex-direction: column; gap: 7px; }
+.ns-label { letter-spacing: var(--type-label-m-track); }
+
+/* control group: [ − | value · unit | + ] — overrides the field's flex with the
+   stepper grid; the field atom supplies the border + focus-within accent. */
+.ns-ctl {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  height: 48px; padding: 0 var(--space-1); gap: var(--space-1); cursor: default;
+}
+
+.ns-btn { color: var(--text-secondary); }
+.ns-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+
+/* value zone: the numeric field + optional unit suffix */
+.ns-vwrap { display: flex; align-items: baseline; justify-content: center; gap: var(--space-1); padding: 0 var(--space-1); min-width: 0; }
+.ns-input {
+  -moz-appearance: textfield; text-align: center;
+  font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.ns-input::-webkit-outer-spin-button, .ns-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* When used as a display spinbutton (role=spinbutton on a span) rather than <input> */
+.ns-value { font: 700 19px var(--font-mono); color: var(--text-primary); font-variant-numeric: tabular-nums; text-align: center; }
+.ns-unit { font: 500 11px var(--font-mono); color: var(--text-muted); letter-spacing: 0.04em; flex: none; }
+
+.ns-hint { font: 400 11px var(--font-sans); color: var(--text-secondary); line-height: 1.4; }
+.ns-hint b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* compact horizontal field variant: label sits inline to the left */
+.ns-field--inline { flex-direction: row; align-items: center; justify-content: space-between; gap: var(--space-3-5); }
+.ns-field--inline .ns-label { flex: 1 1 auto; }
+.ns-field--inline .ns-ctl { cursor: default; }
+
+/* disabled state — the whole field reads inert */
+.ns-field.is-disabled .ns-label { color: var(--widget-disabled-text-color); }
+.ns-field.is-disabled .ns-ctl { background: var(--surface-2); border-color: var(--interface-stroke); box-shadow: none; }
+.ns-field.is-disabled .ns-value,
+.ns-field.is-disabled .ns-unit { color: var(--widget-disabled-text-color); }
+
+/* container-responsive: collapse the inline field to stacked when the card narrows */
+@container (max-width: 240px) {
+  .ns-field--inline { flex-direction: column; align-items: stretch; gap: 7px; }
+}

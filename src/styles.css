@@ -2,7 +2,7 @@
    PoE2 Build Converter — "WRAECLAST" theme
    Tokens + components reskinned from the shared ui-component-library, mapped onto
    the Path of Exile 2 palette (color-theories-and-themes/themes/poe2.css).
-   Copied (not linked) so the built file is fully self-contained / offline.
+   Copied (vendored), not linked — a pinned local subset, so the app has no external CSS dependency.
 
    The look obeys ONE rule: figure/ground contrast. ~75% of the screen is warm
    near-black ground, ~20% is tarnished-gold metal chrome + bone text, and the
@@ -11,192 +11,99 @@
    never a flat fill. Nothing saturated renders at idle.
    ════════════════════════════════════════════════════════════════════════════ */
 
-/* ── 1 · RAW PALETTE — the immutable Wraeclast constants ─────────────────────── */
-:root {
-  /* METALS — tarnished gold/bronze ramp, lit top-left. NEVER flat-filled. */
-  --poe-gold-hi:  #ecd08a;  --poe-gold-hi-rgb: 236, 208, 138;
-  --poe-gold:     #c89b46;  --poe-gold-rgb:    200, 155,  70;
-  --poe-gold-lo:  #9a6f2e;  --poe-gold-lo-rgb: 154, 111,  46;
-  --poe-bronze:   #7c5424;  --poe-bronze-rgb:  124,  84,  36;
-  --poe-tarnish:  #463012;
-  --poe-pewter:   #6e6a60;  --poe-pewter-hi: #a8a294;  --poe-pewter-rgb: 110, 106, 96; /* dead/inactive metal */
+/* ── 0 · VENDORED ui-component-library (v1.2.0) — the single source for the token
+   contract + utilities. Vendored under src/vendor/uikit/ (offline build inlines them).
+   default.css = base contract (the space ladder, radius-scale, and the button shape axis);
+   poe2.css = the canonical WRAECLAST override; utilities.css = opt-in layout helpers.
+   Order matters: these load FIRST, then the app's own glue below can still override. ── */
+@import './vendor/uikit/default.css';
+@import './vendor/uikit/poe2.css';
+@import './vendor/uikit/motion.css'; /* concrete M3 spring values (--motion-exp/std-*) the token aliases resolve to — without this every component transition is invalid and nothing animates */
+@import './vendor/uikit/utilities.css';
+@import './vendor/uikit/components.subset.css'; /* pristine library components the app adopts; poe2 skin tuning is below */
 
-  /* GROUND — warm near-blacks (R≥G≥B) so gold reads as EMITTED light. */
-  --poe-bg-0: #0a0908;  --poe-bg-1: #0f0d0b;  --poe-bg-2: #14110d;
-  --poe-bg-3: #1c1813;  --poe-bg-4: #241e16;
+/* ── 1 · RAW PALETTE — vendored: the full --poe-* Wraeclast palette now lives in
+   src/vendor/uikit/poe2.css (single source). Nothing app-specific remains here. ── */
 
-  /* PARCHMENT — aged paper + ink (in-world scroll surface). */
-  --poe-parch-0: #d9c7a0;  --poe-parch-1: #cdb98e;  --poe-parch-2: #bda878;
-  --poe-parch-3: #a88f63;  --poe-ink: #241b12;
+/* ── 2 · CONTRACT MAP — the vendored poe2.css (src/vendor/uikit/) supplies the FULL
+   token contract on the Wraeclast palette. This block keeps ONLY the app-specific
+   overrides + convenience aliases, so vendored poe2.css is the single source. ── */
+[data-theme='poe2'] {
+  /* App-level deviations from the vendored poe2.css CONTRACT only. NOT palette redefinitions:
+     poe2.css stays the single source for --poe-* and for the chrome tokens (--poe-line/-glow/
+     -glow-soft, --bar-shadow) + the reduced-motion freeze — all of which used to be duplicated
+     here. The LIGHT variant (white ground, steel chrome, blue marble) rides on top of this as the
+     thin `html.theme-light` overlay further down — it does NOT re-point these three. */
+  --font-serif: var(--font-display); /* #311 tooltip's carved name face (vendored maps serif→editorial) */
+  --status-info: var(--poe-cold); /* cold/arcane info — unified with the JSON .n token */
+  --status-danger-text: #ef897e; /* lighter danger for small TEXT (saturated --status-danger is AA-only as a mark) */
+  --status-danger-text-rgb: 239, 137, 126; /* -rgb sibling for partial-alpha use (token-contract -rgb discipline) */
 
-  /* TEXT / BONE — warm off-whites. */
-  --poe-bone: #ded3bf;  --poe-ash: #a39884;  --poe-ash-2: #6f6657;
-  --poe-dim: #4a4338;   --poe-white: #f3ece0;
+  /* ── CRAFT LAYER — `--poe-craft-*` ─────────────────────────────────────────────────────────────
+     A single namespaced semantic layer for the app's craft/affix/gem hues (item-mod source tags +
+     the Emotions planner's affix markers and gem-quality stat colours). Lives here beside the other
+     app-specific namespaced families (`--tree-*`) — NOT in vendored poe2.css, which stays a clean,
+     re-vendorable library theme; and NOT in resolvePalette (the Canvas2D trees never draw craft hues,
+     so exposing them there would be dead code). Each colour used at partial alpha carries an `-rgb`
+     triple (token-contract `--x-rgb` discipline); backgrounds compose `rgba(var(--…-rgb), a)`.
+     The namespace is the point: per color-theory §5.7 a hue may recur across STRUCTURALLY INDEPENDENT
+     layers as long as each is namespaced (so craft-blue ≠ rarity-magic-blue is fine) — BUT the one
+     immutable rule is that gold belongs to the movable `--accent`, so "fractured" is moved off the
+     near-accent gold it used to share onto a distinct desaturated parchment-tan. The light variant
+     leaves this block as-is — item/tooltip cards stay dark there, so these craft hues stay legible. */
+  --poe-craft-flag-fg: #ee8899;
+  --poe-craft-flag-rgb: 210, 70, 70;
+  --poe-craft-crafted-fg: #99bbff;
+  --poe-craft-crafted-rgb: 90, 140, 255;
+  --poe-craft-fractured-fg: #cbb79a; /* was gold #ecb36b — moved off the --accent family */
+  --poe-craft-fractured-rgb: 176, 154, 112; /* was 210,160,60 (≈ accent gold) — now a distinct dull tan */
+  --poe-craft-desecrated-fg: #cc99ff;
+  --poe-craft-desecrated-rgb: 170, 70, 210;
+  --poe-craft-enchant-fg: #66ddcc;
+  --poe-craft-enchant-rgb: 80, 200, 160;
+  --poe-craft-neutral-rgb: 150, 150, 150;
+  --poe-craft-roll-fg: #8dca9b;
+  --poe-craft-roll-rgb: 110, 180, 130;
+  /* Emotions planner — affix prefix/suffix markers + the four gem-quality stat hues (borrowed-hue:
+     a Ruby IS red, like a flask borrowing its orb hue — correct, and now explicitly namespaced). */
+  --poe-craft-affix-pre-fg: #6fc2ff;
+  --poe-craft-affix-pre-rgb: 80, 150, 220;
+  --poe-craft-affix-suf-fg: #c9a6ff;
+  --poe-craft-affix-suf-rgb: 150, 110, 220;
+  --poe-craft-gem-ruby: #e0707a;
+  --poe-craft-gem-sapphire: #6fa8e0;
+  --poe-craft-gem-emerald: #6fc090;
+  --poe-craft-gem-diamond: #d8d2e8;
 
-  /* SIGNAL HUES — "magic". The only high-chroma colour; each is a MEANING. */
-  --poe-fire:      #ff6a1a;  --poe-fire-rgb:      255, 106,  26;
-  --poe-ember:     #c5400e;  --poe-ember-rgb:     197,  64,  14;
-  --poe-cold:      #7fc8e6;  --poe-cold-rgb:      127, 200, 230;
-  --poe-frost:     #cfefff;
-  --poe-lightning: #ffe24a;  --poe-lightning-rgb: 255, 226,  74;
-  --poe-arc:       #b98cff;
-  --poe-chaos:     #b06ae0;  --poe-chaos-rgb:     176, 106, 224;
-  --poe-toxic:     #3fbf6f;  --poe-toxic-rgb:      63, 191, 111;
-  --poe-phys:      #c9c2b6;
+  /* Passive-tree weapon-set tints (set 1 greenish / set 2 reddish) — read by resolvePalette and
+     painted on canvas (hex fallbacks live in render.ts), and by the #tree-legend swatches. Lived in
+     a stray :root block in tree/tree.css; centralised here so the legend + every mounted tree share
+     ONE source. Genesis void = the near-black/purple Breach starfield (distinct from the atlas blue). */
+  --tree-ws1: #79c97e;
+  --tree-ws2: #d9705c;
+  --genesis-void-hi: #08060d;
+  --genesis-void-lo: #040307;
+  /* ONE knob for all three tree viewers' stage height (passive / atlas / genesis — owner request:
+     identical size, single var). Also the atlas/genesis pre-mount CLS reservation value. */
+  --tree-stage-h: clamp(520px, 76vh, 940px);
 
-  /* RESOURCES — the HUD orbs. */
-  --poe-life:    #b11b1b;  --poe-life-rgb:    177,  27,  27;  --poe-life-hi: #e23a2e;
-  --poe-mana:    #1e5fc8;  --poe-mana-rgb:     30,  95, 200;  --poe-mana-hi: #3a86e2;
-  --poe-es:      #8fb8d6;  --poe-es-rgb:      143, 184, 214;
-  --poe-spirit:  #e6c770;  --poe-spirit-rgb:  230, 199, 112;
-  --poe-blood:   #7e140e;  --poe-blood-rgb:   126,  20,  14;
+  /* Conqueror (Timeless Jewel) faction radius tints — recolour in-radius passive nodes by faction.
+     Read by resolvePalette (render.ts); the curated hex baked in jewelSockets.ts (FACTION_ART.tint /
+     GENERIC_RING.tint) is the fallback, so values here MUST match it. The light variant leaves these
+     as-is — the tree keeps its dark void, so the faction tints stay legible. Generic = the no-faction
+     (Time-Lost / generic ring) tint. */
+  --tree-faction-vaal: #d23b3b; /* red */
+  --tree-faction-karui: #d07a3a; /* orange */
+  --tree-faction-maraketh: #36c0c0; /* teal */
+  --tree-faction-templar: #d9b54a; /* gold */
+  --tree-faction-eternal: #8a6fd0; /* violet */
+  --tree-faction-kalguuran: #b6864a; /* bronze */
+  --tree-faction-abyss: #3fae5a; /* green */
+  --tree-faction-generic: #6aa0ff; /* blue — generic/no-faction ring */
 
-  /* ITEM RARITY — CONFIRMED game-default filter colours. Genre-defining. */
-  --poe-normal:      #c8c8c8;  --poe-magic:       #8888ff;  --poe-rare:        #ffff77;
-  --poe-unique:      #af6025;  --poe-unique-hi:   #e16400;  --poe-gem:         #1ba29b;
-  /* rarity as r,g,b triples — the #311 tooltip drives its tier glow off these */
-  --poe-normal-rgb: 200, 200, 200;  --poe-magic-rgb: 136, 136, 255;
-  --poe-rare-rgb:   255, 255, 119;  --poe-unique-rgb: 175,  96,  37;
-  --poe-currency:    #aa9e82;  --poe-currency-hi: #fa007d;  --poe-quest:       #4ae63a;
-
-  /* PASSIVE TREE — cool void + warm gold nodes (warm-on-cool inversion motif). */
-  --poe-void: #0a0e18;  --poe-void-rgb: 10, 14, 24;  --poe-void-2: #141a2a;
-  --poe-nebula: #2a3550;  --poe-node-on: #e6c16a;  --poe-node-on-rgb: 230, 193, 106;
-  --poe-node-off: #4a463e;
-
-  /* ATTRIBUTE GEMS — Str/Dex/Int triad. */
-  --poe-str: #c8302a;  --poe-dex: #3fa64a;  --poe-int: #2e6fc8;
-
-  /* — RARITY layer (loot code) — */
-  --poe-rarity-normal: var(--poe-normal);   --poe-rarity-magic: var(--poe-magic);
-  --poe-rarity-rare: var(--poe-rare);       --poe-rarity-unique: var(--poe-unique);
-  --poe-rarity-gem: var(--poe-gem);         --poe-rarity-currency: var(--poe-currency);
-  --poe-rarity-quest: var(--poe-quest);
-
-  /* — ELEMENTS layer — */
-  --poe-elem-fire: var(--poe-fire);          --poe-elem-fire-rgb: var(--poe-fire-rgb);
-  --poe-elem-cold: var(--poe-cold);          --poe-elem-cold-rgb: var(--poe-cold-rgb);
-  --poe-elem-lightning: var(--poe-lightning);--poe-elem-lightning-rgb: var(--poe-lightning-rgb);
-  --poe-elem-chaos: var(--poe-chaos);        --poe-elem-chaos-rgb: var(--poe-chaos-rgb);
-  --poe-elem-physical: var(--poe-phys);
-
-  /* — ATTRIBUTES layer — */
-  --poe-attr-str: var(--poe-str);  --poe-attr-dex: var(--poe-dex);  --poe-attr-int: var(--poe-int);
-
-  /* — RESOURCES layer — */
-  --poe-res-life: var(--poe-life);     --poe-res-life-rgb: var(--poe-life-rgb);
-  --poe-res-mana: var(--poe-mana);     --poe-res-mana-rgb: var(--poe-mana-rgb);
-  --poe-res-es: var(--poe-es);         --poe-res-es-rgb: var(--poe-es-rgb);
-  --poe-res-spirit: var(--poe-spirit); --poe-res-spirit-rgb: var(--poe-spirit-rgb);
-
-  /* METAL GRADIENT — the load-bearing brushed gold. Recolour via --poe-mtl-a…d. */
-  --poe-mtl-a: var(--poe-gold-hi);  --poe-mtl-b: var(--poe-gold);
-  --poe-mtl-c: var(--poe-bronze);   --poe-mtl-d: var(--poe-tarnish);
-  --poe-metal: linear-gradient(160deg,
-    var(--poe-mtl-a) 0%, var(--poe-mtl-b) 34%, var(--poe-mtl-c) 66%, var(--poe-mtl-d) 100%);
-  /* a LIGHTER ramp for metal that carries dark INK text (CTAs, seg thumb): it stops at
-     gold-lo instead of tarnish so the label clears WCAG-AA over every part of the fill. */
-  --poe-cta-metal: linear-gradient(160deg,
-    var(--poe-gold-hi) 0%, var(--poe-gold) 64%, var(--poe-gold-lo) 100%);
-
-  /* GRAIN + VIGNETTE — the painterly "nothing is flat" substrate. */
-  --poe-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-  --poe-vignette: radial-gradient(120% 120% at 50% 38%,
-    transparent 52%, rgba(0,0,0,0.35) 84%, rgba(0,0,0,0.6) 100%);
-
-  /* MOTION — PoE2 is WEIGHTY: slow heavy settles, nothing snaps. */
-  --poe-ease-weight: cubic-bezier(0.22, 1, 0.36, 1);
-  --poe-ease-rise:   cubic-bezier(0.4, 0, 0.2, 1);
-  --poe-dur-1: calc(200ms / var(--spd, 1));
-  --poe-dur-2: calc(420ms / var(--spd, 1));
-  --poe-dur-3: calc(820ms / var(--spd, 1));
-}
-
-/* ── 2 · CONTRACT MAP — ui-component-library token set on the Wraeclast ground ── */
-[data-theme="poe2"] {
-  color-scheme: dark;
-
-  /* accent — tarnished gold. On a gold fill, text/icons must be warm ink. */
-  --accent:          var(--poe-gold);
-  --accent-rgb:      var(--poe-gold-rgb);
-  --accent-contrast: #1a1206;
-  --accent-hover:    var(--poe-gold-hi);
-  --accent-active:   var(--poe-gold-lo);
-  --spd: 1;
-
-  /* structural skin axis — carved ALL-CAPS labels, glows on, gold brackets, octagon CTA. */
-  --label-transform:     uppercase;
-  --glow-a:              1;
-  --frame-corner-color:  var(--poe-gold);
-  --cta-clip:            polygon(7px 0, calc(100% - 7px) 0, 100% 7px,
-                          100% calc(100% - 7px), calc(100% - 7px) 100%,
-                          7px 100%, 0 calc(100% - 7px), 0 7px);
-  --strip-accent-border: var(--poe-gold);
-
-  /* surfaces — warm near-black */
-  --bg-color:        var(--poe-bg-0);
-  --canvas-bg:       var(--poe-bg-1);
-  --menu-bg:         var(--poe-bg-0);
-  --input-bg:        var(--poe-bg-3);
-  --surface-1:       var(--poe-bg-1);
-  --surface-2:       var(--poe-bg-2);
-  --surface-3:       var(--poe-bg-3);
-  --surface-overlay: rgba(7, 6, 5, 0.92);
-
-  /* text — warm bone whites */
-  --fg-color:                   var(--poe-bone);
-  --input-text:                 #e7ddca;
-  --text-primary:               var(--poe-bone);
-  --text-secondary:             var(--poe-ash);
-  --text-muted:                 var(--poe-ash-2);
-  --descrip-text:               var(--poe-ash);
-  --widget-disabled-text-color: var(--poe-dim);
-
-  /* borders + radii — angular; metal does the framing */
-  --border-color:     #2c2317;
-  --interface-stroke: #3a2f1e;
-  --radius-1: 2px;  --radius-2: 3px;  --radius-3: 5px;  --radius-4: 8px;  --radius-pill: 999px;
-
-  /* type — carved-serif display, clean UI sans, technical mono (all offline fallbacks) */
-  --font-display:   "Cinzel", "Trajan Pro", "Marcellus", "Georgia", serif;
-  --font-editorial: "EB Garamond", "Cormorant", "Georgia", serif;
-  --font-serif:     var(--font-display); /* the #311 item tooltip's carved name/flavour face */
-  --font-sans:      "Inter", "Source Sans 3", system-ui, sans-serif;
-  --font-mono:      "IBM Plex Mono", "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --gx-display-tracking: 0.06em;
-
-  /* status — mapped to in-world meanings. Info shares the JSON-number cold token (one cool hue). */
-  --status-success: #6cb049;          /* nature / restored */
-  --status-success-rgb: 108, 176, 73; /* for alpha glows (single source of truth) */
-  --status-warning: var(--poe-fire);  /* fire / caution    */
-  --status-danger:  #cc382b;          /* blood / death     */
-  --status-info:    var(--poe-cold);  /* cold / arcane info — unified with JSON .n */
-
-  /* data-type / category palette — the full PoE signal set (for future build-contents UI) */
-  --cat-1: var(--poe-gold);     --cat-2: #bf6a2c;            --cat-3: var(--poe-fire);
-  --cat-4: var(--poe-cold);     --cat-5: var(--poe-lightning);--cat-6: var(--poe-chaos);
-  --cat-6-rgb: var(--poe-chaos-rgb); --cat-7: #cf3b30;       --cat-8: #3f86e0;
-  --cat-9: var(--poe-gem);      --cat-10: var(--poe-quest);  --cat-11: var(--poe-toxic);
-  --cat-12: var(--poe-currency);--cat-13: var(--poe-magic);  --cat-14: var(--poe-rare);
-  --cat-15: var(--poe-es);      --cat-16: var(--poe-spirit);
-
-  --bar-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
-
-  /* convenience aliases */
-  --poe-line: var(--border-color);
-  --poe-glow: 0 0 0 1px rgba(var(--poe-gold-rgb), 0.4), 0 0 22px rgba(var(--poe-gold-rgb), 0.28);
-  --poe-glow-soft: 0 0 28px rgba(var(--poe-gold-rgb), 0.18);
-  /* a lighter danger tone for small TEXT (the saturated #cc382b is AA-only as a graphical mark) */
-  --status-danger-text: #ef897e;
-}
-
-/* Respect reduced-motion — freeze the flickers, glows and settles. */
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="poe2"] * {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-  }
+  /* Genesis Womb central item-input slot (canvas drawWombSlot): recessed olive fill + faint rim. */
+  --tree-womb-fill: rgba(54, 58, 40, 0.92);
+  --tree-womb-rim: rgba(120, 126, 88, 0.7);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -204,12 +111,20 @@
    ════════════════════════════════════════════════════════════════════════════ */
 
 /* ── base ─────────────────────────────────────────────────────────────────── */
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 /* author [hidden] guard — wins over component display:flex so main.ts's .hidden
    toggles (panes, stats) actually hide. (display in the author origin beats the UA
    [hidden]{display:none}, so without this both input panes render at once.) */
-[hidden] { display: none !important; }
-html, body { margin: 0; min-height: 100%; }
+[hidden] {
+  display: none !important;
+}
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
 body {
   position: relative;
   min-height: 100vh;
@@ -230,22 +145,319 @@ body {
   z-index: -1;
   display: block;
   pointer-events: none;
-  --accent-rgb: 170, 28, 18; /* deep ember red — the marble ramp's mid colour */
+  --accent-rgb: 170, 28, 18; /* deep ember red — the marble ramp's vein hue */
+  --bg-marble-base-rgb: 0, 0, 0; /* the marble GROUND — black → the classic dark marble (uAccent*k) */
   background: var(--bg-color); /* fallback before WebGL paints / if it's unavailable */
+  /* the wallpaper is lazy-loaded — start invisible and fade the marble in once its first frame is
+     painted (JS adds .bg-on); toggling it off fades back out to the base background. */
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+#bg.bg-on {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  #bg {
+    transition: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   LIGHT / "FROST" variant — the alternate theme: the warm near-black GROUND flips to
+   a cool off-white, gold chrome → brushed STEEL, text inverts to dark, and the WebGL
+   marble keeps its (saturated) ARCANE BLUE so a white UI floats over a blue wallpaper.
+   Implemented as a THIN OVERLAY on top of `data-theme="poe2"` (kept on <html> always)
+   rather than a forked theme: it redefines the RAW palette constants the contract is
+   built on — the `--poe-bg-*` ground, the `--poe-bone/ash/…` text ramp, the `--poe-gold*`
+   metal, the borders — so `--surface-*`, `--text-*`, `--accent`, `--accent-fill`,
+   `--poe-metal`, the corner brackets and every `rgba(var(--accent-rgb),…)` glow follow
+   for free; only the few hardcoded-dark M3 roles + the marble's own `#bg --accent-rgb`
+   need explicit light/blue values. Toggled by main.ts (class on <html>, persisted), with
+   the marble + mounted Canvas2D trees re-reading their palette on `poe2:themechange`.
+   The passive/atlas/genesis tree KEEPS its dark "void" (`.tree-view` uses `--poe-void`,
+   not redefined here) — a constellation window inset in the light UI, with silver nodes.
+   ════════════════════════════════════════════════════════════════════════════ */
+html.theme-light {
+  color-scheme: light;
+
+  /* GROUND — warm near-black → cool off-white, monotonic toward white as it raises. */
+  --poe-bg-0: #e3e8ee; /* page/void (mostly behind the marble) */
+  --poe-bg-1: #edf1f6; /* base surface / canvas */
+  --poe-bg-2: #f4f7fb; /* raised surface */
+  --poe-bg-3: #f9fbfd; /* input wells / raised+ */
+  --poe-bg-4: #ffffff; /* highest chrome / hovered */
+  --surface-overlay: rgba(238, 242, 247, 0.94); /* light glass (was dark) */
+  --surface-0: #f4f7fb;
+  --surface-4: #ffffff;
+
+  /* TEXT — bone/ash off-whites → cool dark ink (inverts the whole text ramp). */
+  --poe-bone: #1b2530; /* primary text */
+  --poe-ash: #46525f; /* secondary */
+  --poe-ash-2: #5a6772; /* muted — AA (~5:1) on the light surfaces */
+  --poe-dim: #99a4af; /* disabled */
+  --poe-white: #0d141c; /* high-emphasis */
+  --input-text: #1b2530;
+  --surface-inverse: #1b2530;
+  --text-inverse: #f4f7fb;
+
+  /* BORDERS — visible mid-greys on the white ground. */
+  --border-color: #ccd4dd;
+  --interface-stroke: #bbc5d0;
+  --border-strong: #a2aeba;
+
+  /* STATUS colours used as TEXT need darker, AA-on-white variants — the dark-tuned ones are too pale
+     on the white panels (e.g. the economy up/down deltas, info/warning text). Used as MARKS (alert
+     border/dot) they just read a touch deeper. The dark islands below (JSON / item cards / tree) don't
+     read these, so darkening here is safe. */
+  --status-success: #2e7d32; /* ~4.8:1 on the light surfaces (was #6cb049, ~2:1) */
+  --status-danger-text: #c0271f; /* readable danger TEXT (was the light salmon #ef897e) */
+  --status-danger-text-rgb: 192, 39, 31;
+  --status-info: #1565c0; /* clear blue (was the pale --poe-cold cyan) */
+  --status-warning: #c2410c; /* deep amber (was the bright --poe-fire orange) */
+
+  /* GOLD → brushed STEEL, tuned to read on white. --poe-gold is THE accent (~5:1 on the
+     light surfaces); --poe-gold-hi stays a light metal SHEEN for the gradients, so
+     --accent-hover/-active are overridden separately to legible steels (hi is too pale for text). */
+  --poe-gold-hi: #aab7c5;
+  --poe-gold-hi-rgb: 170, 183, 197;
+  --poe-gold: #5e6e80;
+  --poe-gold-rgb: 94, 110, 128; /* THE brand steel / accent */
+  --poe-gold-lo: #45525f;
+  --poe-gold-lo-rgb: 69, 82, 95;
+  --poe-bronze: #36424e;
+  --poe-bronze-rgb: 54, 66, 78;
+  --poe-tarnish: #232c35;
+  --accent-hover: #4d5b6a; /* legible steel for hover text/icons (NOT the pale --poe-gold-hi) */
+  --accent-contrast: #f5f8fb; /* white ink ON the steel CTA fill */
+
+  /* TREE — kept silver on the still-dark void (resolvePalette re-reads on poe2:themechange). */
+  --poe-node-on: #cdd6e0;
+  --poe-node-on-rgb: 205, 214, 224;
+
+  /* M3 accent roles hardcoded dark in poe2.css → light steel containers + dark contrast text. */
+  --accent-container: #d9e0e8;
+  --accent-container-contrast: #28333f;
+  --accent-2: #6e7d8d;
+  --accent-2-rgb: 110, 125, 141;
+  --accent-2-contrast: #f5f8fb;
+  --accent-2-container: #dde4eb;
+  --accent-2-container-contrast: #28333f;
+  --accent-inverse: #aab7c5;
+}
+/* Item / tooltip cards stay DARK islands in the light theme: the in-game RARITY + CRAFT colour code
+   (rare-yellow, magic-blue, the affix tags…) is dark-ground-tuned and reads best there — like the
+   tree's void. Scoping the surface + text tokens back to the warm-dark ramp on the card keeps those
+   semantic hues legible without retuning the whole palette; the rarity/craft/tier hues are unchanged. */
+html.theme-light .itc-card {
+  --surface-1: #14110d;
+  --surface-2: #0f0d0b;
+  --text-primary: #ded3bf;
+  --text-secondary: #a39884;
+  --text-muted: #8a7f6c;
+}
+/* The converted-.build JSON is "the single chroma-bearing surface" (gold keys, bone strings, cyan
+   numbers, yellow bools). Keep it a DARK code pane in the light theme — those signal colours are
+   dark-tuned and wash out on white — by scoping the surface + bone text + key accent back to the
+   dark ramp; .n/.b stay the raw cyan/yellow, now legible again. (Same island idea as the tree/cards.) */
+html.theme-light .json-wrap {
+  --canvas-bg: #0f0d0b;
+  --surface-2: #14110d;
+  --border-color: #2c2317;
+  --interface-stroke: #3a2f1e;
+  --poe-bone: #ded3bf; /* strings (.s) */
+  --text-secondary: #a39884; /* base text + the filename bar + .muted */
+  --accent: #c89b46; /* keys (.k) → gold (the brand through-line), not the light steel */
+}
+/* the marble wallpaper in the light theme: a PALE ground with arcane-blue veins (vs the dark theme's
+   black ground + red veins), so dark UI text that sits on the bare wallpaper (the nav / stepper /
+   section intros, between panels) stays legible while the marble still reads clearly blue. */
+html.theme-light #bg {
+  --accent-rgb: 14, 50, 150; /* deep, saturated arcane-blue veins */
+  --bg-marble-base-rgb: 212, 220, 232; /* slightly-dark cool white ground (was black) */
+}
+
+/* read-only Build-notes panel — PoB's <Notes> text, colourised from its ^N/^xRRGGBB codes, never edited */
+.bc-notes {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 22rem;
+  overflow: auto;
+}
+/* read-only Config read-out — the calc assumptions PoB's exported stats hold under */
+.bc-config {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+.bc-config :is(td, th) {
+  padding: 0.18rem 0.55rem;
+  border-bottom: 1px solid rgba(128, 128, 128, 0.16);
+}
+.bc-config tr:last-child :is(td, th) {
+  border-bottom: 0;
+}
+.bc-config .cfg-name {
+  color: var(--text-muted);
+  font-weight: inherit; /* it's a <th scope="row"> for a11y — keep the visual weight of a plain cell */
+  text-align: left;
+}
+.bc-config .cfg-on {
+  color: var(--accent);
+  font-weight: 600;
+}
+.bc-config .cfg-off {
+  color: var(--text-muted);
+}
+.bc-config .cfg-val {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.card-hd .cfg-sub,
+.card-hd .cfg-note {
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: 0.82em;
+}
+/* read-only "full PoB data" inspector — collapsed by default; a verbatim dump of the parsed build */
+.pob-inspector {
+  /* this inspector sits in a BARE .card (no .card-hd/.card-body wrapper to pad it), so inset its
+     summary + JSON past the card's corner brackets (which span x=10–24) — matching .card-hd's 30px
+     left clearance. Without this the collapsed "▶ Full PoB data" summary text overlaps the top-left tick. */
+  padding: 6px var(--space-3-5) 8px 30px;
+}
+.pob-inspector > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding: 0.2rem 0;
+}
+.pob-inspector-json {
+  margin: 0.5rem 0 0;
+  white-space: pre;
+  overflow: auto;
+  max-height: 26rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+/* enriched item card — read-only meta row (ilvl/quality/sockets/defences/flags) + per-mod source tags */
+.idp-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.6rem;
+  margin: 0.15rem 0 0.45rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.idp-meta b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.idp-flag {
+  padding: 0.02rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(var(--poe-craft-flag-rgb), 0.18);
+  color: var(--poe-craft-flag-fg);
+  font-size: 0.72rem;
+}
+.idp-tag {
+  margin-left: 0.3rem;
+  padding: 0.02rem 0.32rem;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  vertical-align: middle;
+}
+.idp-tag--crafted {
+  background: rgba(var(--poe-craft-crafted-rgb), 0.18);
+  color: var(--poe-craft-crafted-fg);
+}
+.idp-tag--fractured {
+  background: rgba(var(--poe-craft-fractured-rgb), 0.2);
+  color: var(--poe-craft-fractured-fg);
+}
+.idp-tag--desecrated {
+  background: rgba(var(--poe-craft-desecrated-rgb), 0.2);
+  color: var(--poe-craft-desecrated-fg);
+}
+.idp-tag--enchant {
+  background: rgba(var(--poe-craft-enchant-rgb), 0.18);
+  color: var(--poe-craft-enchant-fg);
+}
+.idp-tag--mutated,
+.idp-tag--unscalable,
+.idp-tag--custom {
+  background: rgba(var(--poe-craft-neutral-rgb), 0.18);
+  color: var(--text-secondary);
+}
+/* per-mod roll position (PoB's stored {range:N}) — exact, never a guess */
+.idp-rollpct {
+  margin-left: 0.3rem;
+  padding: 0 0.32rem;
+  border-radius: 3px;
+  background: rgba(var(--poe-craft-roll-rgb), 0.18);
+  color: var(--poe-craft-roll-fg);
+  font-size: 0.68rem;
+  vertical-align: middle;
+}
+/* implicit mod lines — drawn above the explicits, tinted the magic/implicit blue (PoB convention) */
+.idp-implicits .itc-mod {
+  color: var(--poe-rarity-magic);
+}
+.itc-sep--impl {
+  opacity: 0.35;
+  margin: 0.15rem 0;
 }
 
 /* painterly substrate — a barely-visible film grain + edge vignette, fixed behind content */
 body::before,
-body::after { content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0; }
-body::before { background-image: var(--poe-grain); opacity: 0.03; mix-blend-mode: overlay; }
-body::after  { background: var(--poe-vignette); }
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+body::before {
+  background-image: var(--poe-grain);
+  opacity: 0.03;
+  mix-blend-mode: overlay;
+}
+body::after {
+  background: var(--poe-vignette);
+}
 /* the background toggle's active state — gold ink + a faint glow on the flame */
-.hd-bg-toggle.on { color: var(--accent); }
-.hd-bg-toggle.on svg { filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a)))); }
+.hd-bg-toggle.on {
+  color: var(--accent);
+}
+.hd-bg-toggle.on svg {
+  filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a))));
+}
+/* the theme toggle's active (light-theme) state — same accent ink + glow treatment as the bg toggle */
+.hd-theme-toggle.on {
+  color: var(--accent);
+}
+.hd-theme-toggle.on svg {
+  filter: drop-shadow(0 0 6px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a))));
+}
 
-code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secondary); }
-.accent { color: var(--accent); }
-.muted { color: var(--text-muted); font-weight: 400; }
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  color: var(--text-secondary);
+}
+.accent {
+  color: var(--accent);
+}
+.muted {
+  color: var(--text-muted);
+  font-weight: 400;
+}
 
 .wrap {
   position: relative;
@@ -253,20 +465,43 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   /* wide by default — the gear panel wants room; capped only so ultra-wide stays readable */
   max-width: 1680px;
   margin: 0 auto;
-  padding: 24px 28px 28px;
+  padding: var(--space-5) 28px 28px;
   /* sticky footer: fill the viewport so the footer drops to the bottom on short pages */
   display: flex;
   flex-direction: column;
   min-height: 100vh;
 }
 /* everything above the footer grows to absorb spare height, pushing the footer down */
-.wrap-main { flex: 1 0 auto; min-width: 0; }
+.wrap-main {
+  flex: 1 0 auto;
+  min-width: 0;
+}
+/* Narrow screens: shrink the page gutter. The 28px desktop gutter is where the fixed marble wallpaper
+   shows through; on a phone it turns the content into a thin column floating in a wide red frame, so
+   tighten it progressively to give the cards the width and reclaim the bleed. */
+@media (max-width: 600px) {
+  .wrap {
+    padding: 18px var(--space-3-5) 22px;
+  }
+}
+@media (max-width: 380px) {
+  .wrap {
+    padding: var(--space-3-5) var(--space-2-5) 18px;
+  }
+}
 
 /* ── a11y utility ───────────────────────────────────────────────────────────
    visually-hidden but available to screen readers (carries the document <h1>). */
 .sr-only {
-  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ── header (hd-) — brand lockup + right-side actions ───────────────────────
@@ -275,150 +510,529 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
    metal mark carry the Wraeclast skin via the shared tokens. */
 .hd-bar {
   container-type: inline-size;
-  position: relative; z-index: 2;
-  display: flex; align-items: center; gap: 18px;
-  width: 100%; box-sizing: border-box; min-height: 58px; padding: 0 16px;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 58px;
+  padding: 0 var(--space-4);
   background: var(--surface-overlay);
-  border: 1px solid var(--border-color); border-radius: var(--radius-3);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-3);
   font-family: var(--font-sans);
 }
 .hd-bar::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px;
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
   background: linear-gradient(90deg, transparent, rgba(var(--accent-rgb), calc(0.9 * var(--glow-a))), transparent);
   pointer-events: none;
 }
-.hd-brand { display: inline-flex; align-items: center; gap: 11px; flex: 0 0 auto; text-decoration: none; }
+.hd-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  flex: 0 0 auto;
+  text-decoration: none;
+}
 .hd-mark {
-  position: relative; width: 28px; height: 28px; flex: 0 0 auto;
-  display: grid; place-items: center; border-radius: var(--radius-2);
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-2);
   /* gold is ALWAYS a metal gradient; dark ink rides the lighter CTA ramp */
-  background: var(--poe-cta-metal); color: var(--accent-contrast);
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
   font: 800 14px/1 var(--font-display);
   box-shadow: 0 0 14px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a)));
 }
-.hd-mark::before, .hd-mark::after {
-  content: ""; position: absolute; width: 6px; height: 6px; border: 1.5px solid var(--frame-corner-color);
+/* ── corner ticks — ONE L-bracket primitive (top-left + bottom-right), keyed on --frame-corner-color
+   + per-element --corner-size / --corner-stroke / --corner-inset. Shared by .hd-mark + .card; the
+   vendored .es empty-state and the 4-corner conic .itc-card overlay keep their own implementations. ── */
+.hd-mark::before,
+.hd-mark::after,
+.card::before,
+.card::after {
+  content: '';
+  position: absolute;
+  width: var(--corner-size);
+  height: var(--corner-size);
+  border: var(--corner-stroke) solid var(--frame-corner-color);
+  pointer-events: none;
 }
-.hd-mark::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
-.hd-mark::after { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
+.hd-mark::before,
+.card::before {
+  top: var(--corner-inset);
+  left: var(--corner-inset);
+  border-right: 0;
+  border-bottom: 0;
+}
+.hd-mark::after,
+.card::after {
+  bottom: var(--corner-inset);
+  right: var(--corner-inset);
+  border-left: 0;
+  border-top: 0;
+}
+.hd-mark {
+  --corner-size: 6px;
+  --corner-stroke: 1.5px;
+  --corner-inset: -3px;
+}
 .hd-name {
-  font: 600 16px/1 var(--font-display); letter-spacing: 0.06em;
-  text-transform: var(--label-transform); color: var(--text-primary); white-space: nowrap;
+  font: 600 16px/1 var(--font-display);
+  letter-spacing: 0.06em;
+  text-transform: var(--label-transform);
+  color: var(--text-primary);
+  white-space: nowrap;
 }
-.hd-name b { color: var(--accent); font-weight: 600; text-shadow: 0 0 16px rgba(var(--accent-rgb), calc(0.4 * var(--glow-a))); }
+.hd-name b {
+  color: var(--accent);
+  font-weight: 600;
+  text-shadow: 0 0 16px rgba(var(--accent-rgb), calc(0.4 * var(--glow-a)));
+}
+/* name + flavour quote stacked to the right of the brand mark */
+.hd-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+  min-width: 0;
+}
+.hd-quote {
+  font: italic 500 13.5px/1.25 var(--font-display);
+  letter-spacing: 0.01em;
+  color: var(--accent);
+  text-transform: none;
+  white-space: nowrap;
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), calc(0.2 * var(--glow-a)));
+}
 
-.hd-actions { display: flex; align-items: center; gap: 10px; flex: 0 1 auto; min-width: 0; margin-left: auto; }
-.hd-iconbtn {
-  position: relative; appearance: none; cursor: pointer; text-decoration: none;
-  width: 32px; height: 32px; display: grid; place-items: center;
-  background: transparent; color: var(--text-secondary);
-  border: 1px solid transparent; border-radius: var(--radius-2);
-  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+.hd-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-left: auto;
 }
-.hd-iconbtn:hover { background: var(--surface-2); color: var(--text-primary); border-color: var(--border-color); }
-.hd-iconbtn:focus-visible {
-  outline: none; color: var(--text-primary);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 12px rgba(var(--accent-rgb), calc(0.4 * var(--glow-a)));
-}
-.hd-iconbtn svg { width: 18px; height: 18px; }
+/* header action buttons now use the library .icb (icb--xs) atom; .hd-bg-toggle.on (above) still
+   tints + glows the active marble-toggle flame. */
 
 /* tagline strip beneath the header (replaces the old h1 + sub paragraph) */
-.app-tagline { margin: 12px 2px 0; color: var(--text-secondary); font-size: 13.5px; }
-.app-tagline code { color: var(--accent); }
+/* per-tab functional subtitle inside the nav, indented under the active tab label; hidden by
+   default — only the active route's line shows, keyed on its tab's aria-selected (set by showRoute) */
+.app-tagline {
+  display: none;
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  color: var(--text-secondary);
+  font-size: 13.5px;
+}
+.app-tagline code {
+  color: var(--accent);
+}
+.nav-top:has(#nav-convert[aria-selected='true']) .app-tagline[data-route='convert'],
+.nav-top:has(#nav-atlas[aria-selected='true']) .app-tagline[data-route='atlas'],
+.nav-top:has(#nav-genesis[aria-selected='true']) .app-tagline[data-route='genesis'],
+.nav-top:has(#nav-emotions[aria-selected='true']) .app-tagline[data-route='emotions'],
+.nav-top:has(#nav-prices[aria-selected='true']) .app-tagline[data-route='prices'],
+.nav-top:has(#nav-faq[aria-selected='true']) .app-tagline[data-route='faq'] {
+  display: block;
+}
+/* On phones the taglines wrap to 2 lines (a few to 1 or 3), and they differ in length — so deep-linking
+   to a route paints the default (convert) tagline, then main.ts swaps in the route's, changing the height
+   and shoving <main> (a layout shift; e.g. faq's 1-line tagline vs convert's 2-line = 22px). Reserve a
+   2-line box on mobile so the swap is height-neutral. Desktop keeps them a natural single line.
+   700px (not 600): the longest tagline still wraps to 2 lines up to ~685px viewport. */
+@media (max-width: 700px) {
+  .app-tagline {
+    min-height: 42px;
+  }
+}
 
-@container (max-width: 420px) { .hd-name { display: none; } }
-
-/* ── stepper (sx-) — the Paste → Preview → Convert → Download flow ───────────
-   Ported from ui-component-library #234; [data-state] on each <li> is driven by
-   renderStepper() in main.ts. Token-only, container-responsive. */
-.sx { container-type: inline-size; width: 100%; display: flex; flex-direction: column; gap: 18px;
-  margin-top: 18px; font-family: var(--font-sans); color: var(--text-primary); }
-.sx-steps { list-style: none; margin: 0; padding: 0; display: grid;
-  grid-template-columns: repeat(var(--n), 1fr); gap: 0; }
-.sx-step { position: relative; display: flex; flex-direction: column; align-items: center;
-  gap: 8px; min-width: 0; padding: 0 4px; text-align: center; }
-.sx-step::before { content: ""; position: absolute; top: 15px; right: 50%; left: -50%;
-  height: 2px; background: var(--surface-3); z-index: 0; }
-.sx-step:first-child::before { display: none; }
-.sx-step[data-state="done"]::before,
-.sx-step[data-state="current"]::before { background: var(--accent); }
-.sx-node { position: relative; z-index: 1; width: 32px; height: 32px; flex: 0 0 auto;
-  display: grid; place-items: center; border-radius: var(--radius-pill);
-  background: var(--surface-2); border: 1.5px solid var(--border-color);
-  color: var(--text-muted); font: 700 12px var(--font-mono); font-variant-numeric: tabular-nums;
-  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease; }
-.sx-step[data-state="done"] .sx-node { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); }
-.sx-step[data-state="current"] .sx-node { background: var(--surface-1); border-color: var(--accent); color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(var(--accent-rgb), calc(0.45 * var(--glow-a))),
-    0 0 12px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a))); }
-.sx-step.sx-step--err[data-state] .sx-node { background: var(--surface-1); border-color: var(--status-danger); color: var(--status-danger); box-shadow: none; }
-.sx-node .sx-check { width: 13px; height: 13px; display: none; }
-.sx-step[data-state="done"] .sx-node .sx-num { display: none; }
-.sx-step[data-state="done"] .sx-node .sx-check { display: block; }
-.sx-check { fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
-.sx-label { font: 600 11.5px var(--font-sans); letter-spacing: 0.04em; line-height: 1.25;
-  text-transform: var(--label-transform); color: var(--text-secondary); transition: color 0.25s ease;
-  overflow-wrap: anywhere; }
-.sx-step[data-state="done"] .sx-label,
-.sx-step[data-state="current"] .sx-label { color: var(--text-primary); }
-.sx-step.sx-step--err .sx-label { color: var(--status-danger); }
-.sx-sub { font: 500 10px var(--font-mono); letter-spacing: 0.02em; color: var(--text-secondary); line-height: 1.3; overflow-wrap: anywhere; }
-.sx-step[data-state="upcoming"] .sx-node,
-.sx-step[data-state="upcoming"] .sx-label { opacity: 0.85; }
-@container (max-width: 360px) {
-  .sx-steps .sx-label, .sx-steps .sx-sub { position: absolute; width: 1px; height: 1px;
-    padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* graceful degradation: drop the long flavour quote on narrow screens, but ALWAYS keep the app name
+   (shrink it a touch on the narrowest phones so it still fits beside the mark + the action icons). */
+@container (max-width: 560px) {
+  .hd-quote {
+    display: none;
+  }
+}
+@container (max-width: 420px) {
+  .hd-name {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+  }
+}
+/* Tiny widths (narrower than any real phone, but devtools/folded screens hit them): the one-line name no
+   longer fits beside the mark, so let it wrap to 2 lines instead of clipping off the right edge. This is a
+   descendant of the .hd-bar container, so a @container query is correct (unlike the flex-wrap below). */
+@container (max-width: 210px) {
+  .hd-name {
+    white-space: normal;
+    line-height: 1.15;
+  }
+}
+/* Small phones: the logo + full name + the two action icons can't all share one row, so the icons WRAP
+   below the brand — the name stays full-size (14px), nothing overflows. NOTE: .hd-bar is its OWN
+   (container-type) container, so this must be a viewport @media query — a container can't be sized by its
+   own @container query. margin-left:auto is dropped (it would absorb the row's free space and block the
+   wrap); justify-content keeps the icons right-aligned while they still fit on the brand's row. */
+@media (max-width: 360px) {
+  .hd-bar {
+    flex-wrap: wrap;
+    justify-content: space-between;
+    row-gap: var(--space-2-5);
+  }
+  .hd-actions {
+    margin-left: 0;
+  }
+  /* tighter input-mode segments so their nowrap labels (Paste code / Upload file / Watch file) don't
+     clip inside the equal-width segments on the smallest phones */
+  .ix-seg button {
+    padding: 0 var(--space-2);
+    font-size: 12px;
+  }
 }
 
 /* ── footer (ft-) — brand + resources + install-path help + legal bar ───────
    Ported from ui-component-library #223, trimmed to the converter's real content
    (no marketing columns / social row); keeps id="provenance" for main.ts. */
-.ft { container-type: inline-size; display: flex; flex-direction: column; margin-top: 28px;
+.ft {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  margin-top: 28px;
   background: linear-gradient(180deg, var(--surface-1), var(--bg-color));
-  border: 1px solid var(--border-color); border-radius: var(--radius-3); overflow: hidden;
-  font-family: var(--font-sans); color: var(--text-secondary); }
-.ft-top { display: grid; grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
-  gap: 28px 24px; padding: 26px 28px 22px; }
-.ft-brand { display: flex; flex-direction: column; gap: 12px; }
-.ft-logo { display: inline-flex; align-items: center; gap: 9px; font: 800 16px var(--font-display);
-  letter-spacing: .05em; text-transform: var(--label-transform); color: var(--text-primary); }
-.ft-mark { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 auto;
-  background: var(--poe-cta-metal); color: var(--accent-contrast); border-radius: var(--radius-1);
-  font: 900 13px/1 var(--font-display);
-  box-shadow: 0 0 14px rgba(var(--accent-rgb), calc(.5 * var(--glow-a))); }
-.ft-blurb { font: 400 12.5px/1.6 var(--font-sans); color: var(--text-muted); max-width: 40ch; margin: 0; }
-.ft-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.ft-col-h { font: 700 10px var(--font-sans); letter-spacing: .18em; text-transform: var(--label-transform);
-  color: var(--text-muted); margin: 0 0 2px; }
-.ft-links { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
-.ft-link { display: inline-flex; align-items: center; gap: 7px; width: max-content; max-width: 100%;
-  text-decoration: none; font: 500 12.5px var(--font-sans); color: var(--text-secondary); transition: color .14s ease; }
-.ft-link:hover { color: var(--text-primary); }
-.ft-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-1); }
-.ft-pip { font: 700 8px var(--font-mono); letter-spacing: .12em; text-transform: var(--label-transform);
-  color: var(--accent-contrast); background: var(--poe-cta-metal); padding: 1px 5px; border-radius: var(--radius-pill);
-  box-shadow: 0 0 10px rgba(var(--accent-rgb), calc(.5 * var(--glow-a))); }
-/* re-housed install-path help (the footer markup has no native slot for a <details>) */
-.ft-details { display: flex; flex-direction: column; }
-.ft-details summary { cursor: pointer; width: max-content; color: var(--text-secondary);
-  font: 500 12.5px var(--font-sans); transition: color .14s ease; }
-.ft-details summary:hover { color: var(--text-primary); }
-.ft-details summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: var(--radius-1); }
-.ft-details ul { list-style: none; margin: 9px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.ft-details li { font: 400 12px/1.5 var(--font-sans); color: var(--text-muted); }
-.ft-details b { color: var(--text-secondary); font-weight: 600; }
-.ft-details code { overflow-wrap: anywhere; word-break: break-word; color: var(--text-secondary); }
-/* bottom legal bar: data provenance (id=provenance) + disclaimer + offline pill */
-.ft-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
-  padding: 14px 28px; border-top: 1px solid var(--border-color); background: var(--surface-2); }
-.ft-copy { font: 500 10.5px/1.5 var(--font-mono); color: var(--text-muted); margin-right: auto; letter-spacing: .01em; min-width: 0; }
-.ft-copy b { color: var(--text-secondary); font-weight: 600; }
-.ft-disclaimer { font: 500 11px var(--font-sans); color: var(--text-muted); }
-@container (max-width: 600px) {
-  .ft-top { grid-template-columns: 1fr 1fr; }
-  .ft-brand { grid-column: 1 / -1; }
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-3);
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--text-secondary);
 }
-@container (max-width: 360px) { .ft-top { grid-template-columns: 1fr; } }
+.ft-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) repeat(3, minmax(0, 1fr));
+  gap: 28px var(--space-5);
+  padding: 26px 28px 22px;
+}
+.ft-brand {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.ft-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font: 800 16px var(--font-display);
+  letter-spacing: 0.05em;
+  text-transform: var(--label-transform);
+  color: var(--text-primary);
+}
+.ft-mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  background: var(--accent-fill);
+  color: var(--accent-contrast);
+  border-radius: var(--radius-1);
+  font: 900 13px/1 var(--font-display);
+  box-shadow: 0 0 14px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a)));
+}
+.ft-blurb {
+  font: 400 12.5px/1.6 var(--font-sans);
+  color: var(--text-muted);
+  max-width: 40ch;
+  margin: 0;
+}
+.ft-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  min-width: 0;
+}
+.ft-col-h {
+  font: 700 10px var(--font-sans);
+  letter-spacing: 0.18em;
+  text-transform: var(--label-transform);
+  color: var(--text-muted);
+  margin: 0 0 var(--space-0-5);
+}
+.ft-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.ft-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: 100%;
+  text-decoration: none;
+  font: 500 12.5px var(--font-sans);
+  color: var(--text-secondary);
+  transition: color 0.14s ease;
+}
+.ft-link:hover {
+  color: var(--text-primary);
+}
+.ft-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-1);
+}
+.ft-pip {
+  font: 700 8px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: var(--label-transform);
+  color: var(--accent-contrast);
+  background: var(--accent-fill);
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a)));
+}
+/* re-housed install-path help (the footer markup has no native slot for a <details>) */
+.ft-details {
+  display: flex;
+  flex-direction: column;
+}
+.ft-details summary {
+  cursor: pointer;
+  width: max-content;
+  color: var(--text-secondary);
+  font: 500 12.5px var(--font-sans);
+  transition: color 0.14s ease;
+}
+.ft-details summary:hover {
+  color: var(--text-primary);
+}
+.ft-details summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-1);
+}
+.ft-details ul {
+  list-style: none;
+  margin: 9px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ft-details li {
+  font: 400 12px/1.5 var(--font-sans);
+  color: var(--text-muted);
+}
+.ft-details b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.ft-details code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--text-secondary);
+}
+/* bottom legal bar: data provenance (id=provenance) + disclaimer + offline pill */
+.ft-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2-5) 18px;
+  padding: var(--space-3-5) 28px;
+  border-top: 1px solid var(--border-color);
+  background: var(--surface-2);
+}
+.ft-copy {
+  font: 500 10.5px/1.5 var(--font-mono);
+  color: var(--text-secondary); /* ash, not ash-2: keeps the required GGG provenance line >= 4.5:1 (a11y) */
+  margin-right: auto;
+  letter-spacing: 0.01em;
+  min-width: 0;
+}
+.ft-copy b {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+.ft-disclaimer {
+  font: 500 11px var(--font-sans);
+  color: var(--text-secondary); /* ash, not ash-2: keeps the required GGG disclaimer >= 4.5:1 (a11y) */
+}
+@container (max-width: 600px) {
+  .ft-top {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ft-brand {
+    grid-column: 1 / -1;
+  }
+}
+@container (max-width: 360px) {
+  .ft-top {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── top-level nav (tb-) + route panels ─────────────────────────────────────
+   The library .tb-wrap is demo-narrow (min(420px,100%), centred); the app nav is
+   full-width chrome with left-aligned tabs and a forged-gold glow on the underline.
+   Routes are display-toggled — only the active one occupies layout. ── */
+.nav-top {
+  width: 100%;
+  align-items: stretch; /* tabs left-aligned, bar spans full width */
+  padding: 0;
+  gap: 0;
+  margin-top: var(--space-4);
+}
+.nav-top .tb-underline {
+  box-shadow: 0 0 8px rgba(var(--accent-rgb), calc(0.5 * var(--glow-a)));
+}
+/* Mobile: the 6-tab section bar is wider than a phone — make .tb-bar a horizontally-scrollable strip
+   (keeps the single row + the sliding underline, which lives inside .tb-bar and scrolls with it). The
+   page no longer scrolls sideways and every tab stays reachable by swiping. */
+@media (max-width: 768px) {
+  .tb-bar {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .tb-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .tb-tab {
+    flex: 0 0 auto;
+    padding: 0 var(--space-3-5);
+  }
+  .nav-top .tb-underline {
+    bottom: 0; /* keep the 3px indicator inside the scroll-clip box */
+  }
+}
+.route {
+  margin-top: 18px;
+  /* Fill down to the fold so the (tall) footer stays BELOW the viewport during load. Deep-linking to a
+     route paints Convert first, then main.ts swaps in the target and fills its JS content — both move the
+     footer. While the footer's top is on-screen those moves count as layout shift (CLS); kept off-screen
+     they don't. The sticky footer (.wrap min-height:100vh) already parks short routes' footer at the
+     viewport bottom, so this only nudges it just past the fold — no visible change, but CLS-silent. */
+  min-height: calc(100dvh - 170px);
+}
+.route[hidden] {
+  display: none;
+} /* author display rules must not resurrect a hidden route */
+.route > .card:first-child {
+  margin-top: 0;
+} /* Atlas/Prices pages: their single card sits flush */
+.route:focus {
+  outline: none;
+} /* tabpanel is programmatically focusable; no focus ring */
+
+/* Deep-link boot gate (paired with the <head> data-boot-route script): when the URL hash names a non-default
+   route, paint THAT route at first paint instead of the default Convert route. Otherwise the deferred main.ts
+   swaps routes after the first paint and shoves the footer ~500px down — a large layout shift (CLS). main.ts
+   removes the attribute once it has routed, after which the normal [hidden] state governs visibility again. */
+html[data-boot-route] #route-convert {
+  display: none;
+}
+/* !important to override the `[hidden] { display: none !important }` guard above: the target route still
+   carries the static `hidden` attribute at first paint (main.ts removes it a beat later). */
+html[data-boot-route='atlas'] #route-atlas,
+html[data-boot-route='genesis'] #route-genesis {
+  display: block !important;
+}
+
+/* Convert stepper-router: one .step-panel is shown at a time; Back/Next below */
+.step-panel {
+  margin-top: 18px;
+}
+.step-panel[hidden] {
+  display: none;
+}
+.step-nav {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: 18px;
+}
+.step-nav #step-next {
+  margin-left: auto;
+} /* Next pins right even when Back is hidden (step 1) */
+/* unlocked stepper nodes act as buttons; locked ones (build not parsed yet) are inert */
+.sx-step[role='button'] {
+  cursor: pointer;
+}
+.sx-step--locked {
+  cursor: default;
+}
+
+/* FAQ accordion — APG disclosure: a button head + a labelled panel, wired by the vendored
+   `accordion` behavior (data-behavior="accordion" data-accordion="single" on .faq-list). */
+.faq-list {
+  display: flex;
+  flex-direction: column;
+}
+.faq-item {
+  border-bottom: 1px solid var(--interface-stroke);
+}
+.faq-q {
+  margin: 0;
+  font: inherit;
+}
+.faq-hd {
+  width: 100%;
+  appearance: none;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  padding: var(--space-3-5) var(--space-1);
+  font: 600 14px var(--font-sans);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+.faq-hd::before {
+  content: '+';
+  flex: 0 0 auto;
+  width: 1em;
+  text-align: center;
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 1.1em;
+}
+.faq-hd[aria-expanded='true']::before {
+  content: '\2212';
+} /* − */
+.faq-hd:hover {
+  color: var(--accent);
+}
+.faq-hd:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-1);
+}
+.faq-a {
+  padding: 0 var(--space-1) var(--space-4) 26px;
+  color: var(--text-secondary);
+  font: 400 13.5px/1.6 var(--font-sans);
+  max-width: 75ch;
+}
+.faq-a code {
+  color: var(--accent);
+}
 
 /* ── layout grid ──────────────────────────────────────────────────────────── */
 .grid {
@@ -431,13 +1045,22 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   align-items: stretch;
 }
 @media (max-width: 820px) {
-  .grid { grid-template-columns: 1fr; }
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 /* both cards are FIXED at the full-output size in every state (input/output, empty/full), so
    converting never resizes anything — the textarea / JSON pane fill the card and scroll past it */
-.grid > .card { height: 640px; }
+.grid > .card {
+  height: 640px;
+}
 /* but don't stack two locked 640px cards on a phone — size to content when single-column */
-@media (max-width: 820px) { .grid > .card { height: auto; min-height: 380px; } }
+@media (max-width: 820px) {
+  .grid > .card {
+    height: auto;
+    min-height: 380px;
+  }
+}
 
 /* ── card — one top-lit metal rim + two L-bracket corner ticks ─────────────── */
 .card {
@@ -454,26 +1077,23 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
     linear-gradient(var(--surface-1), var(--surface-1)) padding-box,
     var(--poe-metal) border-box;
 }
-/* two corner ticks (top-left + bottom-right only) — carved frame, restrained */
+/* two corner ticks — the shared primitive above, sized for the card frame (carved, restrained) */
+.card {
+  --corner-size: 14px;
+  --corner-stroke: 2px;
+  --corner-inset: 10px;
+}
 .card::before,
 .card::after {
-  content: "";
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--frame-corner-color);
-  pointer-events: none;
   z-index: 2;
 }
-.card::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
-.card::after  { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
 .card-hd {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: var(--space-2);
   /* extra left padding so the label clears the top-left corner bracket (ends at x=24) */
-  padding: 11px 14px 11px 30px;
+  padding: 11px var(--space-3-5) 11px 30px;
   /* match the taller (status-pill) header so INPUT + OUTPUT labels sit identically vs their brackets */
   min-height: 48px;
   border-bottom: 1px solid var(--interface-stroke);
@@ -483,220 +1103,114 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   color: var(--accent);
 }
 .card-body {
-  padding: 16px;
+  padding: var(--space-4);
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: var(--space-3);
   flex: 1; /* fill the (stretched) card so the input/JSON area can grow + buttons pin to the foot */
   min-height: 0; /* let the flex children (textarea / JSON pane) shrink + scroll, not overflow */
 }
 
-/* ── buttons ──────────────────────────────────────────────────────────────── */
-.row { display: flex; gap: 8px; flex-wrap: wrap; }
-.ix-btn {
-  appearance: none;
-  cursor: pointer;
-  font: 600 12px var(--font-sans);
-  letter-spacing: 0.06em;
-  color: var(--text-primary);
-  background: var(--surface-2);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-2);
-  padding: 9px 16px;
-  transition: background var(--poe-dur-1) var(--poe-ease-weight),
-    border-color var(--poe-dur-1) ease, color var(--poe-dur-1) ease;
+/* ── buttons — base .ix-btn comes from the library subset (M3). This keeps the .row
+   layout glue + the poe2 PRIMARY skin: the forged-octagon plate + earned gold glow +
+   press that the M3 flat-slab primary drops. (The metal fill is the M3 --accent-fill.) ── */
+.row {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
-.ix-btn:hover { background: var(--surface-3); border-color: var(--text-muted); }
-.ix-btn:active { background: var(--canvas-bg); }
-.ix-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.ix-btn--ghost { background: transparent; }
-.ix-btn[disabled] {
-  color: var(--widget-disabled-text-color);
-  background: var(--surface-2);
-  border-color: var(--interface-stroke);
-  cursor: not-allowed;
+/* Convert step: the "Reset" secondary action sits at the far right of the Convert button's row. */
+#convert-reset {
+  margin-left: auto;
 }
-
-/* the two true CTAs (#convert, #download) — forged-octagon gold slabs */
 .ix-btn--primary {
   clip-path: var(--cta-clip);
-  background: var(--poe-cta-metal);
-  color: var(--accent-contrast);
   border: 0;
-  font: 700 12px var(--font-sans);
-  letter-spacing: 0.08em;
-  text-transform: var(--label-transform);
-  padding: 10px 22px;
   /* clip-path clips box-shadow, so the earned glow rides on filter: drop-shadow */
-  transition: filter var(--poe-dur-1) var(--poe-ease-weight), transform var(--poe-dur-1) ease;
+  transition:
+    filter var(--poe-dur-1) var(--poe-ease-weight),
+    transform var(--poe-dur-1) ease,
+    background calc(var(--motion-effect-fast-dur) * var(--spd)) var(--motion-effect-fast-ease);
 }
 .ix-btn--primary:hover {
-  background: var(--poe-cta-metal);
-  border: 0;
   filter: brightness(1.08) drop-shadow(0 0 9px rgba(var(--poe-gold-rgb), calc(0.45 * var(--glow-a))));
 }
-.ix-btn--primary:active { filter: brightness(0.96); transform: translateY(1px); }
-.ix-btn--primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.ix-btn--primary:active {
+  filter: brightness(0.96);
+  transform: translateY(1px);
+}
 .ix-btn--primary[disabled] {
   clip-path: var(--cta-clip);
-  background: var(--surface-2);
-  color: var(--widget-disabled-text-color);
   filter: none;
   transform: none;
-  cursor: not-allowed;
 }
 
-/* ── segmented control ────────────────────────────────────────────────────── */
-.ix-seg {
-  position: relative;
-  display: inline-flex;
-  max-width: 100%;
-  background: var(--input-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-2);
-  padding: 3px;
-  align-self: flex-start;
-}
-.ix-seg-thumb {
-  position: absolute;
-  top: 3px;
-  bottom: 3px;
-  left: calc(3px + var(--i) * (100% - 6px) / var(--n));
-  width: calc((100% - 6px) / var(--n));
-  background: var(--poe-cta-metal);
-  border-radius: var(--radius-1);
-  transition: left var(--poe-dur-2) var(--poe-ease-weight);
-}
-.ix-seg button {
-  position: relative;
-  z-index: 1;
-  appearance: none;
-  cursor: pointer;
-  border: 0;
-  background: transparent;
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: var(--label-transform);
-  color: var(--text-secondary);
-  padding: 6px 16px;
-  transition: color var(--poe-dur-1) ease;
-}
-.ix-seg button.on { color: var(--accent-contrast); }
-.ix-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-1); }
-
-/* ── fields ───────────────────────────────────────────────────────────────── */
-.lbl {
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.04em;
-  text-transform: var(--label-transform);
-  color: var(--text-secondary);
-}
-.pane { display: flex; flex-direction: column; gap: 8px; flex: 1; min-height: 0; }
-.ta,
-.inp {
-  width: 100%;
-  min-width: 0;
-  background: var(--input-bg);
-  color: var(--input-text);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-2);
-  font: 500 12.5px var(--font-mono);
-  outline: none;
-  transition: border-color var(--poe-dur-1) ease, box-shadow var(--poe-dur-1) ease;
-}
-.ta { flex: 1; min-height: 150px; padding: 10px 12px; line-height: 1.5; resize: vertical; word-break: break-all; }
-.inp { height: 36px; padding: 0 12px; }
-.ta:focus,
-.inp:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), 0 0 14px rgba(var(--accent-rgb), calc(0.3 * var(--glow-a)));
-}
-
-/* ── dropzone ─────────────────────────────────────────────────────────────── */
-.dz-zone {
-  width: 100%;
-  min-width: 0;
-  height: 120px;
+/* ── fields — .in-field / .in-input / .in-label come from the library subset (#323).
+   Kept: the app's .pane layout glue + a multi-line skin so the paste box (#code) hosts a
+   fill-height textarea inside the .in-field shell (the library's own #252 textarea pattern). ── */
+.pane {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 1.5px dashed var(--border-color);
-  border-radius: var(--radius-3);
-  background: var(--surface-1);
-  cursor: pointer;
-  transition: border-color var(--poe-dur-1) ease, background var(--poe-dur-1) ease;
+  gap: var(--space-2);
+  flex: 1;
+  min-height: 0;
 }
-.dz-zone-ic {
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-2);
-  border: 2px solid var(--text-secondary);
-  position: relative;
+.pane .in {
+  flex: 1;
+  min-height: 0;
+} /* the paste field group fills the pane */
+.in-field--area {
+  height: auto;
+  align-items: stretch;
+  flex: 1;
+  padding: 0;
 }
-.dz-zone-ic::before,
-.dz-zone-ic::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  background: var(--text-secondary);
-  transform: translate(-50%, -50%);
+.in-field--area .in-input {
+  min-height: 150px;
+  padding: var(--space-2-5) var(--space-3);
+  line-height: 1.5;
+  resize: vertical;
+  word-break: break-all;
+  font: var(--type-body-s-weight, 500) 12.5px var(--font-mono);
 }
-.dz-zone-ic::after { width: 2px; height: 12px; }
-.dz-zone-ic::before { width: 12px; height: 2px; }
-.dz-zone-txt {
-  font: 600 11px var(--font-mono);
-  letter-spacing: 0.03em;
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 0 12px;
-}
-.dz-zone:hover { border-color: var(--text-muted); }
-.dz-zone.over { border-color: var(--accent); background: rgba(var(--accent-rgb), 0.06); }
-.dz-zone.over .dz-zone-ic { border-color: var(--accent); }
-.dz-zone.over .dz-zone-ic::before,
-.dz-zone.over .dz-zone-ic::after { background: var(--accent); }
-.dz-zone.done { border-style: solid; border-color: var(--status-success); }
-.dz-zone.done .dz-zone-txt { color: var(--status-success); }
-.dz-zone:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-/* ── status pill ──────────────────────────────────────────────────────────── */
-.fb-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font: 600 11px var(--font-sans);
-  letter-spacing: 0.04em;
-  padding: 4px 12px;
-  border-radius: var(--radius-2);
-  border: 1px solid;
-  text-transform: none;
+/* ── dropzone — base .dz-zone/.dz-zone-ic/.dz-zone-txt/.over/.done from the library
+   subset (#29). Skin: full-width (library caps at 320px) + hover/focus the subset omits. ── */
+.dz-zone {
+  width: 100%;
 }
-.fb-pill-glyph { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-.fb-pill[data-state='idle'] {
-  color: var(--text-secondary);
-  background: var(--surface-2);
-  border-color: var(--border-color);
+.dz-zone:hover {
+  border-color: var(--text-muted);
 }
-.fb-pill[data-state='idle'] .fb-pill-glyph { background: var(--text-muted); }
-.fb-pill[data-state='done'] {
-  color: var(--status-success);
-  background: color-mix(in srgb, var(--status-success) 12%, transparent);
-  border-color: color-mix(in srgb, var(--status-success) 40%, transparent);
+.dz-zone:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
-.fb-pill[data-state='done'] .fb-pill-glyph {
-  background: var(--status-success);
-  box-shadow: 0 0 10px rgba(var(--status-success-rgb), calc(0.4 * var(--glow-a)));
+
+/* persistent file-watch banner (Bridge 1a) = uikit #243 .bn (vendored); it sits under the stepper, so
+   it gets top+bottom spacing + a gentle "live" pulse on the icon glow while watching (amber won't pulse). */
+#bc-watch {
+  margin: var(--space-1-5) 0 var(--space-4);
 }
-.fb-pill[data-state='error'] {
-  color: var(--status-danger-text);   /* lighter red so the 11px label clears AA */
-  background: color-mix(in srgb, var(--status-danger) 12%, transparent);
-  border-color: color-mix(in srgb, var(--status-danger) 40%, transparent);
+@media (prefers-reduced-motion: no-preference) {
+  .bn--success .bn-icon {
+    animation: bn-live 2.4s ease-in-out infinite;
+  }
 }
-.fb-pill[data-state='error'] .fb-pill-glyph { background: var(--status-danger); }
+@keyframes bn-live {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--bn-c) 38%, transparent),
+      0 0 12px rgba(var(--bn-c-rgb), calc(0.4 * var(--glow-a)));
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px color-mix(in srgb, var(--bn-c) 60%, transparent),
+      0 0 18px rgba(var(--bn-c-rgb), calc(0.8 * var(--glow-a)));
+  }
+}
 
 /* ── stats strip — forged divider lines + gold top edge, values in gold ─────── */
 .stats {
@@ -715,7 +1229,7 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   text-transform: var(--label-transform);
   color: var(--text-secondary);
   background: var(--surface-2);
-  padding: 7px 12px;
+  padding: 7px var(--space-3);
 }
 .stat b {
   margin-left: 5px;
@@ -726,44 +1240,79 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
 }
 
 /* ── warnings (toasts) — coloured left edge + dot (colour is never the only cue) ─ */
-.warnings { display: flex; flex-direction: column; gap: 6px; }
-.warnings:empty { display: none; }
-.ts-toast {
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.warnings:empty {
+  display: none;
+}
+.alert {
   display: flex;
   align-items: flex-start;
   gap: 9px;
   min-width: 0;
-  padding: 8px 11px;
+  padding: var(--space-2) 11px;
   background: var(--surface-2);
   border: 1px solid var(--border-color);
   border-left-width: 3px;
   border-radius: var(--radius-2);
 }
-.ts-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex: 0 0 auto; }
-.ts-txt { min-width: 0; }
-.ts-txt b {
+.alert-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex: 0 0 auto;
+}
+.alert-txt {
+  min-width: 0;
+}
+.alert-txt b {
   display: block;
   font: 700 11px var(--font-sans);
   letter-spacing: 0.04em;
   text-transform: var(--label-transform);
   color: var(--text-primary);
 }
-.ts-txt span {
+.alert-txt span {
   display: block;
   font: 500 11.5px var(--font-mono);
   color: var(--text-secondary);
   line-height: 1.45;
   word-break: break-word;
 }
-.ts-toast.info { border-left-color: var(--status-info); }
-.ts-toast.info .ts-dot { background: var(--status-info); }
-.ts-toast.warn { border-left-color: var(--status-warning); }
-.ts-toast.warn .ts-dot { background: var(--status-warning); }
-.ts-toast.danger { border-left-color: var(--status-danger); }
-.ts-toast.danger .ts-dot { background: var(--status-danger); }
+.alert.info {
+  border-left-color: var(--status-info);
+}
+.alert.info .alert-dot {
+  background: var(--status-info);
+}
+.alert.warn {
+  border-left-color: var(--status-warning);
+}
+.alert.warn .alert-dot {
+  background: var(--status-warning);
+}
+.alert.danger {
+  border-left-color: var(--status-danger);
+}
+.alert.danger .alert-dot {
+  background: var(--status-danger);
+}
+/* (MOVED VERBATIM from auditPanel.css 2026-07-04 — toastHtml('good') now renders outside that lazy
+   chunk, e.g. the download note, so the success skin lives with its info/warn/danger siblings) */
+.alert.success {
+  border-left-color: var(--status-success);
+}
+.alert.success .alert-dot {
+  background: var(--status-success);
+}
 
 /* ── json output — the single chroma-bearing surface; strings stay bone ─────── */
 .json-wrap {
+  position: relative; /* anchors the converter loader overlay (.cv-loader) */
   min-width: 0;
   background: var(--canvas-bg);
   border: 1px solid var(--border-color);
@@ -776,22 +1325,77 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   display: flex;
   flex-direction: column;
 }
+/* converter loader — a brief overlay on the JSON result while "converting" (the work is instant; this
+   is the requested visual feedback, shown over the already-rendered result, then hidden). */
+.cv-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: color-mix(in srgb, var(--canvas-bg) 84%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+.cv-loader[hidden] {
+  display: none;
+}
+.cv-loader .ld-conic {
+  width: 34px;
+  height: 34px;
+}
+.cv-loader-txt {
+  letter-spacing: 0.05em;
+  text-transform: var(--label-transform);
+}
+/* the bar is a <summary> — the JSON pane is collapsed by default (step-5 anti-scroll-fest);
+   caret via ::before (the default marker is suppressed so the flex layout stays intact) */
 .json-bar {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 12px;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: 7px var(--space-3);
   background: var(--surface-2);
   border-bottom: 1px solid var(--interface-stroke);
   font: 600 11px var(--font-mono);
   color: var(--text-secondary);
+  cursor: pointer;
+  list-style: none;
 }
-#json-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#json-size { flex: 0 0 auto; }
-.json-bar .muted { color: var(--text-secondary); }
+.json-bar::-webkit-details-marker {
+  display: none;
+}
+.json-bar::before {
+  content: '▸';
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+.json-details[open] > .json-bar::before {
+  content: '▾';
+}
+#json-size {
+  margin-left: auto; /* replaces the old space-between (the caret is a third flex item now) */
+}
+#json-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#json-size {
+  flex: 0 0 auto;
+}
+.json-bar .muted {
+  color: var(--text-secondary);
+}
 .json-out {
   margin: 0;
-  padding: 14px;
+  padding: var(--space-3-5);
   flex: 1; /* fill the wrap below the filename bar; the wrap's height bounds it */
   min-height: 0;
   overflow: auto;
@@ -801,18 +1405,30 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   tab-size: 2;
   font-variant-numeric: tabular-nums;
 }
-.json-out .k { color: var(--accent); }      /* keys → gold (the brand through-line) */
-.json-out .s { color: var(--poe-bone); }     /* strings (dominant token) → bone, stays calm */
-.json-out .n { color: var(--poe-cold); }      /* numbers → cold blue (the one cool signal) */
-.json-out .b { color: var(--poe-lightning); } /* true/false/null → lightning-yellow (rare; orange stays = warning) */
-.json-out .muted { color: var(--text-secondary); }
+.json-out .k {
+  color: var(--accent);
+} /* keys → gold (the brand through-line) */
+.json-out .s {
+  color: var(--poe-bone);
+} /* strings (dominant token) → bone, stays calm */
+.json-out .n {
+  color: var(--poe-cold);
+} /* numbers → cold blue (the one cool signal) */
+.json-out .b {
+  color: var(--poe-lightning);
+} /* true/false/null → lightning-yellow (rare; orange stays = warning) */
+.json-out .muted {
+  color: var(--text-secondary);
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    4 · BUILD CONTENTS PREVIEW — full-width, below the cards (live, before convert)
    Saturated colour is spent only on the unique "chase" items; skills + perks stay
    calm gold-and-bone so a long list never reads as a rainbow.
    ════════════════════════════════════════════════════════════════════════════ */
-.bc { margin-top: 18px; }
+.bc {
+  margin-top: 18px;
+}
 
 /* character identity bar */
 .bc-char {
@@ -821,12 +1437,19 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding-bottom: 14px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3-5);
+  padding-bottom: var(--space-3-5);
   border-bottom: 1px solid var(--interface-stroke);
 }
-.bc-id { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+.bc-id {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
 .bc-cls {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -835,40 +1458,81 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   text-transform: var(--label-transform);
   color: var(--text-primary);
 }
-.bc-asc {
+/* the ascendancy-name label recipe — the breakdown chip and the class-splash caption are the
+   same concept (only the hue differs: breakdown = accent, splash = the tier tint) */
+.bc-asc,
+.asc-splash-asc {
   min-width: 0;
   overflow-wrap: anywhere;
   font: 600 12px var(--font-mono);
   letter-spacing: 0.04em;
   text-transform: var(--label-transform);
+}
+.bc-asc {
   color: var(--accent);
 }
-.bc-lv { font: 600 12px var(--font-mono); color: var(--text-secondary); }
-.bc-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--text-muted); flex: 0 0 auto; }
-.bc-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.bc-lv {
+  font: 600 12px var(--font-mono);
+  color: var(--text-secondary);
+}
+.bc-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: 0 0 auto;
+}
+.bc-main {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
 .bc-main span {
   font: 600 10px var(--font-mono);
   letter-spacing: 0.1em;
   text-transform: var(--label-transform);
   color: var(--text-secondary);
 }
-.bc-main b { font: 700 13px var(--font-sans); color: var(--accent); overflow-wrap: anywhere; }
+.bc-main b {
+  font: 700 13px var(--font-sans);
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
 
 /* skills, then perks below — each full width under the gear gallery */
-.bc-grid { display: grid; grid-template-columns: 1fr; gap: 22px; }
+.bc-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+}
 /* perks span the full width, so flow each allocated-passive list into columns */
-#bc-perks .bc-list { display: block; column-width: 13rem; column-gap: 26px; }
-#bc-perks .bc-list .bc-row { break-inside: avoid; margin-bottom: 6px; }
-.bc-col { min-width: 0; }
-.bc-col-hd {
+#bc-perks .bc-list {
+  display: block;
+  column-width: 13rem;
+  column-gap: 26px;
+}
+#bc-perks .bc-list .bc-row {
+  break-inside: avoid;
+  margin-bottom: var(--space-1-5);
+}
+.bc-col {
+  min-width: 0;
+}
+/* the panel-section heading recipe — shared with the stats panel's .sp-hd (its lazy chunk keeps
+   only its own border/margin specifics; the entry rule matching pre-mount is harmless) */
+.bc-col-hd,
+.sp-hd {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-2);
   font: 600 10px var(--font-mono);
   letter-spacing: 0.14em;
   text-transform: var(--label-transform);
   color: var(--accent);
+}
+.bc-col-hd {
+  margin-bottom: var(--space-2);
 }
 .bc-col-hd span {
   font-size: 10px;
@@ -879,10 +1543,17 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   padding: 1px 7px;
 }
 
-.bc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
 .bc-row {
   min-width: 0;
-  padding: 6px 9px;
+  padding: var(--space-1-5) 9px;
   background: var(--surface-2);
   border: 1px solid var(--border-color);
   border-left-width: 2px;
@@ -903,23 +1574,46 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
   overflow-wrap: anywhere;
 }
 
-/* item rows are rarity-FRAMED (left border = the in-game item-frame colour) + a rarity-tinted name */
-.bc-item.r-unique { border-left-color: var(--poe-unique); }
-.bc-item.r-unique .bc-name { color: var(--poe-unique-hi); }
-.bc-item.r-rare   { border-left-color: var(--poe-rare); }
-.bc-item.r-rare   .bc-name { color: var(--poe-rare); }
-.bc-item.r-magic  { border-left-color: var(--poe-magic); }
-.bc-item.r-magic  .bc-name { color: var(--poe-magic); }
-.bc-item.r-normal { border-left-color: var(--poe-normal); }
-.bc-item.r-normal .bc-name { color: var(--poe-normal); }
-
 /* a row's title line: name (grows + can shrink) + a small level on the right */
-.bc-line { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
-.bc-line .bc-name { flex: 1 1 auto; }
-.bc-lvl { flex: 0 0 auto; font: 600 10px var(--font-mono); color: var(--text-secondary); }
+.bc-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.bc-line .bc-name {
+  flex: 1 1 auto;
+}
+.bc-lvl {
+  flex: 0 0 auto;
+  font: 600 10px var(--font-mono);
+  color: var(--text-secondary);
+}
+
+/* per-gem PoB detail markers (corrupt / ×count / variant / minion) — verbatim, shown only when present */
+.bc-gm {
+  font: 600 9px var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  opacity: 0.85;
+}
+.bc-gm--corrupt {
+  color: var(--status-danger-text);
+  opacity: 1;
+}
+.bc-gm--minion {
+  color: color-mix(in srgb, var(--poe-rarity-magic) 60%, var(--text-primary));
+  opacity: 1;
+}
 
 /* skills stay neutral; only the main socket group is flagged (a forged gold tag) */
-.bc-skill .bc-name { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bc-skill .bc-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
 .bc-tag {
   font: 700 8px var(--font-mono);
   letter-spacing: 0.1em;
@@ -933,71 +1627,33 @@ code { font-family: var(--font-mono); font-size: 0.92em; color: var(--text-secon
 }
 
 /* perks: keystones in gold (the brand) */
-.bc-key { border-left-color: var(--accent); }
-.bc-key .bc-name { color: var(--accent); }
+.bc-key {
+  border-left-color: var(--accent);
+}
+.bc-key .bc-name {
+  color: var(--accent);
+}
 
-.bc-empty { margin: 0; font: 500 11.5px var(--font-mono); color: var(--text-secondary); }
-.bc-foot { margin: 8px 0 0; font: 500 10.5px/1.5 var(--font-mono); color: var(--text-secondary); }
-
-/* expandable item rows: click the summary to reveal the item's mods (a chevron hints it) */
-details.bc-item > summary {
-  cursor: pointer;
-  list-style: none;
-  position: relative;
-  padding-right: 14px;
-  outline: none;
-}
-details.bc-item > summary::-webkit-details-marker { display: none; }
-details.bc-item > summary::after {
-  content: "";
-  position: absolute;
-  right: 1px;
-  top: 7px;
-  width: 5px;
-  height: 5px;
-  border-right: 1.5px solid var(--text-muted);
-  border-bottom: 1.5px solid var(--text-muted);
-  transform: rotate(-45deg);
-  transition: transform var(--poe-dur-1) ease;
-}
-details.bc-item[open] > summary::after { transform: rotate(45deg); }
-details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-1); }
-.bc-mods {
-  list-style: none;
-  margin: 7px 0 0;
-  padding: 7px 0 0;
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.bc-mods li { font: 500 11px/1.4 var(--font-mono); color: var(--text-secondary); overflow-wrap: anywhere; }
-
-/* socketed rune / soul-core names, shown above the mods on expand */
-.bc-runes {
-  margin: 7px 0 0;
-  padding: 7px 0 0;
-  border-top: 1px solid var(--border-color);
-  font: 500 11px/1.4 var(--font-mono);
-  color: var(--text-primary);
-  overflow-wrap: anywhere;
-}
-.bc-runes-l {
-  margin-right: 4px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: var(--label-transform);
+.bc-empty {
+  margin: 0;
+  font: 500 11.5px var(--font-mono);
   color: var(--text-secondary);
 }
-.bc-runes + .bc-mods { border-top: 0; margin-top: 5px; padding-top: 0; }
+.bc-foot {
+  margin: var(--space-2) 0 0;
+  font: 500 10.5px/1.5 var(--font-mono);
+  color: var(--text-secondary);
+}
 
 /* a sub-heading within a column (e.g. "Jewels" under the items) */
-.bc-col-hd + .bc-subhd { margin-top: 2px; }
+.bc-col-hd + .bc-subhd {
+  margin-top: var(--space-0-5);
+}
 .bc-subhd {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin: 14px 0 8px;
+  gap: var(--space-2);
+  margin: var(--space-3-5) 0 var(--space-2);
   font: 600 10px var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: var(--label-transform);
@@ -1013,7 +1669,7 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
 }
 /* a repeated perk name (distinct nodes, same name) collapses to one row with a ×N allocation count */
 .bc-mult {
-  margin-left: 6px;
+  margin-left: var(--space-1-5);
   font: 600 10px var(--font-mono);
   font-style: normal;
   color: var(--text-secondary);
@@ -1021,29 +1677,46 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
 
 /* conversion-tier legend + per-element markers (● part of the build · ○ preview only) */
 .bc-legend {
-  margin: -4px 0 14px;
+  margin: -4px 0 var(--space-3-5);
   font: 500 10.5px/1.5 var(--font-mono);
   letter-spacing: 0.02em;
   color: var(--text-secondary);
 }
-.bc-legend code { font-size: 0.95em; color: var(--text-secondary); }
+.bc-legend code {
+  font-size: 0.95em;
+  color: var(--text-secondary);
+}
 /* a calm, neutral heads-up (not a warning) — keeps users from blaming the converter
    for items that were never in the imported code */
 .bc-note {
-  display: flex; align-items: flex-start; gap: 9px;
-  margin: -4px 0 16px; padding: 9px 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: -4px 0 var(--space-4);
+  padding: 9px var(--space-3);
   border: 1px solid var(--interface-stroke);
   border-left: 2px solid var(--status-info);
   border-radius: var(--radius-2);
   background: rgba(var(--poe-cold-rgb), 0.05);
-  font: 500 11.5px/1.5 var(--font-sans); color: var(--text-secondary);
+  font: 500 11.5px/1.5 var(--font-sans);
+  color: var(--text-secondary);
 }
-.bc-note b { color: var(--text-primary); font-weight: 600; }
+.bc-note b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
 .bc-note-ic {
-  flex: 0 0 auto; width: 15px; height: 15px; margin-top: 1px;
-  display: grid; place-items: center; border-radius: 50%;
-  background: var(--status-info); color: var(--canvas-bg);
-  font: 700 10px var(--font-mono); font-style: normal;
+  flex: 0 0 auto;
+  width: 15px;
+  height: 15px;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--status-info);
+  color: var(--canvas-bg);
+  font: 700 10px var(--font-mono);
+  font-style: normal;
 }
 .bc-tier {
   font-style: normal;
@@ -1064,24 +1737,59 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
 /* ── gear gallery: equipped items as #311 tooltips, grouped by category ──────
    Natural-height cards (NO inner scroll — every stat is visible), uniform width,
    responsive auto-fill. Grouping similar items keeps card heights aligned per row. */
-.bc-gear { container-type: inline-size; margin: 4px 0 18px; display: flex; flex-direction: column; }
+.bc-gear {
+  container-type: inline-size;
+  margin: var(--space-1) 0 18px;
+  display: flex;
+  flex-direction: column;
+}
 /* a visible separator between each category section */
-.bc-gear-sec + .bc-gear-sec { border-top: 1px solid var(--interface-stroke); margin-top: 18px; padding-top: 18px; }
-.bc-gear-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(266px, 1fr)); gap: 16px; align-items: stretch; }
+.bc-gear-sec + .bc-gear-sec {
+  border-top: 1px solid var(--interface-stroke);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+.bc-gear-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(266px, 1fr));
+  gap: var(--space-4);
+  align-items: stretch;
+}
 /* uniform height per row: cards stretch, the mods area grows so the stamp pins to the
    foot (grouping keeps the stretch small — similar items share a row) — and NO inner scroll */
-.bc-gear .itc-card { width: 100%; display: flex; flex-direction: column; }
-.bc-gear .itc-body { flex: 1 1 auto; }
+.bc-gear .itc-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.bc-gear .itc-body {
+  flex: 1 1 auto;
+}
 
 /* empty slot — motionless placeholder card, muted via the dead-metal pewter tier (no rarity
    colour) rather than a blanket opacity, which would drag the slot name below AA contrast */
-.itc-card--empty { --itc-tier: var(--poe-pewter); --itc-tier-rgb: var(--poe-pewter-rgb); }
-.itc-card--empty .itc-name { color: var(--text-secondary); text-shadow: none; }
-.itc-card--empty .itc-header::after { animation: none; opacity: 0.2; }
+.itc-card--empty {
+  --itc-tier: var(--poe-pewter);
+  --itc-tier-rgb: var(--poe-pewter-rgb);
+}
+.itc-card--empty .itc-name {
+  color: var(--text-secondary);
+  text-shadow: none;
+}
+.itc-card--empty .itc-header::after {
+  animation: none;
+  opacity: 0.2;
+}
 .itc-empty-body {
-  display: flex; align-items: center; justify-content: center; min-height: 54px;
-  color: var(--text-secondary); font: 500 11px var(--font-mono); letter-spacing: 0.06em;
-  text-transform: uppercase; text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 54px;
+  color: var(--text-secondary);
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
 }
 
 /* ── #311 item tooltip (itc-) — ported from ui-component-library; tier = rarity ── */
@@ -1100,47 +1808,60 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
   border-radius: var(--radius-2);
   background:
     linear-gradient(var(--surface-1), var(--surface-2)) padding-box,
-    linear-gradient(150deg,
-      color-mix(in srgb, var(--itc-tier) 78%, var(--accent-hover)) 0%,
-      var(--itc-tier) 38%,
-      color-mix(in srgb, var(--itc-tier) 60%, #000) 100%) border-box;
+    linear-gradient(
+        150deg,
+        color-mix(in srgb, var(--itc-tier) 78%, var(--accent-hover)) 0%,
+        var(--itc-tier) 38%,
+        color-mix(in srgb, var(--itc-tier) 60%, #000) 100%
+      )
+      border-box;
   box-shadow:
-    0 18px 44px -18px rgba(0, 0, 0, 0.85),
-    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 44px -18px rgba(var(--shadow-rgb), 0.85),
+    0 0 0 1px rgba(var(--shadow-rgb), 0.6),
     inset 0 1px 0 rgba(var(--accent-rgb), calc(0.18 * var(--glow-a)));
 }
 /* tier frame-echo — a second hued rim floating just outside the card */
 .itc-card::before {
-  content: "";
+  content: '';
   position: absolute;
   inset: -4px;
   border-radius: calc(var(--radius-2) + 3px);
   padding: 1px;
-  background: linear-gradient(135deg,
-    rgba(var(--itc-tier-rgb), 0.55), transparent 35%, transparent 65%,
-    rgba(var(--itc-tier-rgb), 0.35));
-  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-          mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  background: linear-gradient(
+    135deg,
+    rgba(var(--itc-tier-rgb), 0.55),
+    transparent 35%,
+    transparent 65%,
+    rgba(var(--itc-tier-rgb), 0.35)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
   -webkit-mask-composite: xor;
-          mask-composite: exclude;
+  mask-composite: exclude;
   opacity: 0.8;
   pointer-events: none;
 }
 /* accent HUD corner brackets — gold via --frame-corner-color */
 .itc-card::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 5px;
   pointer-events: none;
   background:
-    conic-gradient(from 180deg at top left,
-      var(--frame-corner-color) 0 90deg, transparent 0) top left / 13px 13px no-repeat,
-    conic-gradient(from 270deg at top right,
-      var(--frame-corner-color) 0 90deg, transparent 0) top right / 13px 13px no-repeat,
-    conic-gradient(from 90deg  at bottom left,
-      var(--frame-corner-color) 0 90deg, transparent 0) bottom left / 13px 13px no-repeat,
-    conic-gradient(from 0deg   at bottom right,
-      var(--frame-corner-color) 0 90deg, transparent 0) bottom right / 13px 13px no-repeat;
+    conic-gradient(from 180deg at top left, var(--frame-corner-color) 0 90deg, transparent 0) top left / 13px 13px
+      no-repeat,
+    conic-gradient(from 270deg at top right, var(--frame-corner-color) 0 90deg, transparent 0) top right / 13px 13px
+      no-repeat,
+    conic-gradient(from 90deg at bottom left, var(--frame-corner-color) 0 90deg, transparent 0) bottom left / 13px 13px
+      no-repeat,
+    conic-gradient(from 0deg at bottom right, var(--frame-corner-color) 0 90deg, transparent 0) bottom right / 13px 13px
+      no-repeat;
+  /* jscpd:ignore-start — -webkit-mask/mask MUST be byte-identical twins (vendor-prefix pair; CSS
+     has no way to share the value between the prefixed and standard property) */
   -webkit-mask:
     linear-gradient(#000 0 0) top left / 13px 2px no-repeat,
     linear-gradient(#000 0 0) top left / 2px 13px no-repeat,
@@ -1150,7 +1871,7 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
     linear-gradient(#000 0 0) bottom left / 2px 13px no-repeat,
     linear-gradient(#000 0 0) bottom right / 13px 2px no-repeat,
     linear-gradient(#000 0 0) bottom right / 2px 13px no-repeat;
-          mask:
+  mask:
     linear-gradient(#000 0 0) top left / 13px 2px no-repeat,
     linear-gradient(#000 0 0) top left / 2px 13px no-repeat,
     linear-gradient(#000 0 0) top right / 13px 2px no-repeat,
@@ -1159,29 +1880,28 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
     linear-gradient(#000 0 0) bottom left / 2px 13px no-repeat,
     linear-gradient(#000 0 0) bottom right / 13px 2px no-repeat,
     linear-gradient(#000 0 0) bottom right / 2px 13px no-repeat;
+  /* jscpd:ignore-end */
   opacity: 0.85;
   z-index: 2;
 }
 .itc-header {
   position: relative;
-  padding: 11px 14px 10px;
+  padding: 11px var(--space-3-5) var(--space-2-5);
   text-align: center;
   border-bottom: 1px solid color-mix(in srgb, var(--itc-tier) 55%, transparent);
   background:
-    radial-gradient(135% 150% at 50% -40%,
-      rgba(var(--itc-tier-rgb), 0.26), transparent 64%),
-    linear-gradient(180deg,
-      rgba(var(--itc-tier-rgb), 0.10),
-      rgba(var(--itc-tier-rgb), 0.02) 70%, transparent);
+    radial-gradient(135% 150% at 50% -40%, rgba(var(--itc-tier-rgb), 0.26), transparent 64%),
+    linear-gradient(180deg, rgba(var(--itc-tier-rgb), 0.1), rgba(var(--itc-tier-rgb), 0.02) 70%, transparent);
   overflow: hidden;
 }
 .itc-header::after {
-  content: "";
+  content: '';
   position: absolute;
-  left: 0; right: 0; bottom: -1px;
+  left: 0;
+  right: 0;
+  bottom: -1px;
   height: 2px;
-  background: linear-gradient(90deg,
-    transparent, rgba(var(--itc-tier-rgb), 0.95), transparent) 0 0 / 40% 100% no-repeat;
+  background: linear-gradient(90deg, transparent, rgba(var(--itc-tier-rgb), 0.95), transparent) 0 0 / 40% 100% no-repeat;
   mix-blend-mode: screen;
   animation: itc-rim-sheen calc(4100ms * var(--spd)) linear infinite;
 }
@@ -1194,16 +1914,25 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--itc-tier);
-  text-shadow: 0 0 14px rgba(var(--itc-tier-rgb), 0.45), 0 1px 0 rgba(0, 0, 0, 0.6);
+  text-shadow:
+    0 0 14px rgba(var(--itc-tier-rgb), 0.45),
+    0 1px 0 rgba(var(--shadow-rgb), 0.6);
   overflow-wrap: anywhere;
 }
 /* nothing in a card should overflow its width */
-.itc-base, .itc-mod, .itc-reqs, .itc-runes { overflow-wrap: anywhere; }
+.itc-base,
+.itc-mod,
+.itc-reqs,
+.itc-runes {
+  overflow-wrap: anywhere;
+}
 /* unique names use the brighter unique hue (#e16400) so they clear AA on the dark card face */
-.itc-r-unique .itc-name { color: var(--poe-unique-hi); }
+.itc-r-unique .itc-name {
+  color: var(--poe-unique-hi);
+}
 .itc-base {
   display: block;
-  margin-top: 2px;
+  margin-top: var(--space-0-5);
   font-family: var(--font-serif);
   font-weight: 600;
   font-size: 0.82rem;
@@ -1212,60 +1941,110 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
   color: color-mix(in srgb, var(--itc-tier) 72%, var(--text-primary));
   opacity: 0.92;
 }
-.itc-body { padding: 10px 14px; }
+/* a third header line for a defining sub-property (jewel "Radius: Very Large") — mono,
+   tier-tinted-muted. Added here + contributed back to the library as an item-tooltip atom. */
+.itc-subline {
+  display: block;
+  margin-top: var(--space-0-5);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--itc-tier) 50%, var(--text-muted));
+}
+.itc-body {
+  padding: var(--space-2-5) var(--space-3-5);
+}
+/* a body section label — mono uppercase, muted. Groups itc-card mod/stat rows under a heading
+   (the emotion tooltip's "On a Jewel / On a Waystone" bands). Added here + an item-tooltip atom. */
+.itc-sec-h {
+  font: 600 0.7rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.itc-sec-h:not(:first-child) {
+  margin-top: 7px;
+}
 .itc-sep {
   position: relative;
   height: 9px;
   margin: 9px 0;
   border: 0;
-  background: linear-gradient(90deg,
+  background: linear-gradient(
+    90deg,
     transparent,
     color-mix(in srgb, var(--itc-tier) 50%, transparent) 18%,
     color-mix(in srgb, var(--itc-tier) 50%, transparent) 82%,
-    transparent);
+    transparent
+  );
   -webkit-mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat;
-          mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat;
+  mask: linear-gradient(#000 0 0) center / 100% 1px no-repeat;
 }
 .itc-sep::after {
-  content: "";
+  content: '';
   position: absolute;
-  left: 50%; top: 50%;
-  width: 7px; height: 7px;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 7px;
   transform: translate(-50%, -50%) rotate(45deg);
   background: var(--itc-tier);
-  box-shadow: 0 0 6px rgba(var(--itc-tier-rgb), 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  box-shadow:
+    0 0 6px rgba(var(--itc-tier-rgb), 0.6),
+    inset 0 0 0 1px rgba(var(--shadow-rgb), 0.4);
   animation: itc-boss-glint calc(3300ms * var(--spd)) ease-in-out infinite;
 }
 .itc-reqs {
-  margin-top: 4px;
+  margin-top: var(--space-1);
   font-family: var(--font-mono);
   font-size: 0.74rem;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
 }
-.itc-reqs .itc-attr-c { color: color-mix(in srgb, var(--status-info) 80%, var(--text-primary)); }
+.itc-reqs .itc-attr-c {
+  color: color-mix(in srgb, var(--status-info) 80%, var(--text-primary));
+}
+/* a muted secondary line — a granted skill's description, or a passive's mutually-exclusive
+   alternatives. Normal text (not mono/italic) so longer descriptions stay readable. */
+.itc-desc {
+  margin-top: 5px;
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.itc-desc b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
 
 /* mod rows — readable, NOT the component's red --cat-7 default: explicit mods read
    PoE periwinkle, rune-granted stats get a warm tint + a RUNE badge */
 .itc-mod {
   position: relative;
-  padding-left: 12px;
+  padding-left: var(--space-3);
   color: color-mix(in srgb, var(--poe-magic) 58%, var(--text-primary));
   line-height: 1.55;
 }
 .itc-mod::before {
-  content: "";
+  content: '';
   position: absolute;
-  left: 0; top: 0.35em; bottom: 0.35em;
+  left: 0;
+  top: 0.35em;
+  bottom: 0.35em;
   width: 2px;
   border-radius: 1px;
   background: currentColor;
   opacity: 0.5;
 }
-.itc-mod--bonus { color: color-mix(in srgb, var(--poe-spirit) 74%, var(--text-primary)); }
+.itc-mod--bonus {
+  color: color-mix(in srgb, var(--poe-spirit) 74%, var(--text-primary));
+}
 .itc-mod--bonus::after {
   content: attr(data-tag);
-  margin-left: 6px;
+  margin-left: var(--space-1-5);
   font-family: var(--font-mono);
   font-size: 0.62rem;
   letter-spacing: 0.08em;
@@ -1273,16 +2052,27 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
   opacity: 0.7;
 }
 /* socketed rune / soul-core NAMES (not stats) — a labelled warm line */
-.itc-runes { margin-top: 6px; font-size: 0.78rem; line-height: 1.5; color: color-mix(in srgb, var(--poe-spirit) 78%, var(--text-primary)); }
-.itc-runes span { font: 700 0.62rem var(--font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-right: 4px; }
+.itc-runes {
+  margin-top: var(--space-1-5);
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--poe-spirit) 78%, var(--text-primary));
+}
+.itc-runes span {
+  font: 700 0.62rem var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
 
 /* foot stamp — repurposed from the component's red "corrupted" stamp into a neutral
    slot label that carries the ●/○ conversion marker; preview-only items go red */
 .itc-stamp {
   /* full card width — the card has no padding, so a 0 side-margin sits flush; the
      original -14px side / -10px bottom margins overflowed past the card edge */
-  margin: 8px 0 0;
-  padding: 6px 14px;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-1-5) var(--space-3-5);
   text-align: center;
   font-family: var(--font-serif);
   font-size: 0.68rem;
@@ -1291,12 +2081,15 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
   text-transform: uppercase;
   color: var(--text-secondary);
   background:
-    radial-gradient(120% 160% at 50% 120%, rgba(var(--itc-tier-rgb), 0.16), transparent 70%),
-    var(--canvas-bg);
+    radial-gradient(120% 160% at 50% 120%, rgba(var(--itc-tier-rgb), 0.16), transparent 70%), var(--canvas-bg);
   border-top: 1px solid color-mix(in srgb, var(--itc-tier) 34%, transparent);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 12px 100%, 0 calc(100% - 12px));
 }
-.itc-stamp .bc-tier { font-size: 1em; color: var(--text-secondary); cursor: default; }
+.itc-stamp .bc-tier {
+  font-size: 1em;
+  color: var(--text-secondary);
+  cursor: default;
+}
 .itc-stamp--preview {
   color: var(--status-danger-text);
   background:
@@ -1304,16 +2097,850 @@ details.bc-item > summary:focus-visible { outline: 2px solid var(--accent); outl
     var(--canvas-bg);
   border-top-color: color-mix(in srgb, var(--status-danger) 40%, transparent);
 }
-.itc-stamp--preview .bc-tier { color: var(--status-danger-text); }
-.itc-card--featured .itc-header { box-shadow: inset 0 0 22px rgba(var(--itc-tier-rgb), 0.28); }
-.itc-card--featured .itc-name { text-shadow: 0 0 16px rgba(var(--itc-tier-rgb), 0.5), 0 1px 0 rgba(0, 0, 0, 0.7); }
+.itc-stamp--preview .bc-tier {
+  color: var(--status-danger-text);
+}
+.itc-card--featured .itc-header {
+  box-shadow: inset 0 0 22px rgba(var(--itc-tier-rgb), 0.28);
+}
+.itc-card--featured .itc-name {
+  text-shadow:
+    0 0 16px rgba(var(--itc-tier-rgb), 0.5),
+    0 1px 0 rgba(var(--shadow-rgb), 0.7);
+}
 /* (no .itc-card:focus-visible — gear cards are non-interactive display, never focused;
    all their stats are shown inline, so there's nothing to reveal on focus) */
 @keyframes itc-rim-sheen {
-  0%   { background-position: -160% 0; }
-  100% { background-position:  260% 0; }
+  0% {
+    background-position: -160% 0;
+  }
+  100% {
+    background-position: 260% 0;
+  }
 }
 @keyframes itc-boss-glint {
-  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.9) rotate(45deg); }
-  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.08) rotate(45deg); }
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(0.9) rotate(45deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08) rotate(45deg);
+  }
+}
+
+/* ── integration glue: tree / atlas / economy cards ──────────────── */
+.tc-note {
+  margin: 0 0 var(--space-3);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  max-width: 72ch;
+}
+.tc-note code {
+  color: var(--text-secondary);
+}
+.tc-missing {
+  margin: var(--space-2-5) 0 0;
+  font-size: 0.8rem;
+  color: var(--status-warning, var(--text-muted));
+}
+/* weapon-set tint legend (shown only when the build has set-specific nodes) — swatches reuse
+   the same --tree-ws1/2 tokens the canvas tints with, so the key always matches the tree. */
+.tc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px var(--space-3-5);
+  margin: var(--space-2) 0 var(--space-0-5);
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+}
+.tc-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+.tc-legend-sw {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(var(--shadow-rgb), 0.35);
+}
+.tc-legend-sw--ws1 {
+  background: var(--tree-ws1);
+}
+.tc-legend-sw--ws2 {
+  background: var(--tree-ws2);
+}
+.tc-legend-note {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Variants step (multi-.build export): each row maps one loadout tuple to one .build ── */
+.var-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-2-5) 0;
+}
+.var-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.var-row--blank {
+  border-color: var(--status-warning, var(--accent));
+}
+.var-move {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+/* .var-up / .var-down reorder arrows + .var-remove use the library .icb (icb--xs) atom (look +
+   focus ring + disabled state baked in); the classes remain only as JS reorder hooks (main.ts). */
+/* shared chrome for the app's compact NATIVE form fields (the decided-keep native controls):
+   the variant-row name input + selects and the loadout selects restate one look */
+.var-name,
+.var-sel select,
+.loadout-sel {
+  color: var(--text-primary);
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.var-name {
+  flex: 1 1 140px;
+  min-width: 120px;
+  padding: var(--space-1-5) var(--space-2);
+  font-size: 0.85rem;
+}
+.var-sel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: var(--label-transform);
+}
+.var-sel select {
+  max-width: 170px;
+  padding: 5px var(--space-1-5);
+  font-size: 0.8rem;
+}
+.var-preview {
+  flex: 1 1 100%;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.var-remove {
+  margin-left: auto; /* push to the row end; .icb provides the button look + focus ring */
+}
+.var-empty {
+  margin: var(--space-2) 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+.var-note {
+  margin-top: var(--space-2);
+}
+
+/* loadout browse dropdown (Verify breakdown + Passive tree card headers) + the stats-source note */
+.loadout-pick {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  text-transform: var(--label-transform);
+  letter-spacing: 0.04em;
+}
+.loadout-sel {
+  max-width: 220px;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.82rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.bc-stats-note {
+  margin: var(--space-1) 0 var(--space-2-5);
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-secondary);
+}
+.card-hd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2-5);
+}
+.hd-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--surface-3);
+  border-radius: 999px;
+  padding: var(--space-0-5) var(--space-2);
+}
+#tree-toolbar {
+  margin-bottom: var(--space-2-5);
+}
+/* ALL THREE viewers share one stage height (--tree-stage-h): the passive tree matches the
+   atlas/genesis planner pages exactly (owner request 2026-07-04 — one var controls all three). */
+#tree-mount .tree-view,
+#atlas-mount .tree-view,
+#genesis-mount .tree-view {
+  height: var(--tree-stage-h);
+}
+/* Reserve that exact height on the (initially empty) mount BEFORE JS injects the .tree-view — otherwise
+   deep-linking straight to #atlas / #genesis paints a 0-height stage, then the canvas mounts and pushes
+   the footer down ~520–940px, a large cumulative layout shift. Matching min-height = zero shift. */
+#atlas-mount,
+#genesis-mount {
+  min-height: var(--tree-stage-h);
+}
+/* Genesis sits on a very dark, near-black void with a faint purple tint (the Breach/Chayula theme)
+   instead of the atlas blue `--poe-void`. Subtle gradient so it reads near-uniform; the carved facade
+   is drawn over this and the void shows at the edges + behind it. */
+#genesis-mount .tree-view {
+  background: radial-gradient(120% 120% at 50% 38%, var(--genesis-void-hi), var(--genesis-void-lo) 72%);
+}
+
+/* ── Phase 6 — class/ascendancy splash (DOM overlay over the world-space tree canvas) ──
+   The stage is the relative anchor shared by #tree-mount (the canvas) and #asc-splash (this
+   overlay). The splash is an .itc-card pinned to a corner — non-interactive, pointer-transparent
+   so it never steals pan/zoom/clicks from the canvas beneath it. Token-driven only. */
+.tc-stage {
+  position: relative;
+}
+.asc-splash {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  width: min(260px, calc(100% - 24px));
+  pointer-events: none; /* the tree canvas owns all gestures — the splash is pure display */
+}
+/* the card reuses .itc-card (rim, glow, header gradient) but tints to the accent + lays out
+   the illustration above the title + flavour quote. */
+.asc-splash-card {
+  --itc-tier: var(--accent);
+  --itc-tier-rgb: var(--accent-rgb);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(2px);
+}
+/* windowed illustration: a fixed box clipping one frame out of the inlined atlas. */
+.asc-splash-frame {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  overflow: hidden;
+  max-height: 132px;
+  border-bottom: 1px solid color-mix(in srgb, var(--itc-tier) 34%, transparent);
+  background: radial-gradient(120% 100% at 50% 0%, rgba(var(--itc-tier-rgb), 0.18), transparent 70%), var(--poe-void);
+}
+.asc-splash-art {
+  display: block;
+  background-repeat: no-repeat;
+  /* the windowed crop fades into the card face instead of a hard bottom edge */
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent);
+}
+.asc-splash-body {
+  padding: var(--space-2-5) var(--space-3) var(--space-3);
+}
+.asc-splash-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+  min-width: 0;
+}
+.asc-splash-cls {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 700 14px var(--font-display);
+  letter-spacing: 0.04em;
+  text-transform: var(--label-transform);
+  color: var(--text-primary);
+  text-shadow: 0 1px 0 rgba(var(--shadow-rgb), 0.6);
+}
+/* the shared ascendancy-label recipe lives with .bc-asc (breakdown section); only the tint here */
+.asc-splash-asc {
+  color: var(--itc-tier);
+  text-shadow: 0 0 12px rgba(var(--itc-tier-rgb), 0.4);
+}
+.asc-splash-sep {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: 0 0 auto;
+  align-self: center;
+}
+/* the flavour quote in GGG's own flavour colour (--asc-flav, set inline from a SANITIZED hex);
+   falls back to the card tier colour when the export's colour is missing/invalid. */
+.asc-splash-quote {
+  margin: var(--space-2) 0 0;
+  font: italic 400 12px / 1.5 var(--font-serif, var(--font-display));
+  color: var(--asc-flav, color-mix(in srgb, var(--itc-tier) 70%, var(--text-secondary)));
+  text-shadow: 0 1px 2px rgba(var(--shadow-rgb), 0.7);
+}
+@media (max-width: 560px) {
+  /* on narrow screens the overlay would swallow the small tree — drop it below the canvas instead */
+  .asc-splash {
+    position: static;
+    width: 100%;
+    margin-top: var(--space-2-5);
+  }
+  .asc-splash-card {
+    backdrop-filter: none;
+  }
+}
+/* atlas planner controls row — count line + the Copy plan link button */
+.at-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2-5);
+}
+/* "Background art" visibility toggle — pushed to the right end of the controls row */
+.at-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.at-toggle input {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+/* per-tree allocation counters — a dot in each mechanic's colour + allocated/total */
+.at-counts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px var(--space-4);
+  margin: 0 0 var(--space-3);
+  /* Reserve one chip-row of height: these rows are empty in the HTML and main.ts fills them after mount,
+     so without this the populated chips push the stage + footer down — a layout shift on a direct #atlas/
+     #genesis load. One row of the 0.82rem chips measures ~15px. */
+  min-height: 1rem;
+}
+/* the atlas-master point row sits just under the per-tree row as one logical group */
+.at-counts--masters {
+  margin-top: -5px;
+}
+.at-ct {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font: 600 0.82rem var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+.at-ct-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: rgb(var(--ct-rgb));
+  box-shadow: 0 0 6px rgba(var(--ct-rgb), calc(0.55 * var(--glow-a)));
+}
+.at-ct-lbl {
+  color: var(--text-secondary);
+}
+.at-ct-n {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.at-ct-sep {
+  opacity: 0.5;
+  margin: 0 1px;
+}
+/* light up the count in its mechanic colour once you've allocated in that tree — mixed toward the
+   theme text (the .em-way-pct idiom) so the dark-ground hues stay legible in the light theme too */
+.at-ct--on .at-ct-n {
+  color: color-mix(in srgb, rgb(var(--ct-rgb)) 60%, var(--text-primary));
+}
+.at-ct--on .at-ct-lbl {
+  color: var(--text-primary);
+}
+#atlas-share {
+  font-size: 0.78rem;
+  padding: var(--space-1) var(--space-2-5);
+}
+
+/* ── Atlas-Masters drawer — a planner-only LEFT flyout over the atlas canvas ──
+   Planner aside (Doryani/Hilda/Jado): a 4×3 keystone grid, one pick per row, 4-pt cap.
+   Themed per master via --am-accent (an rgb triple set on the drawer + each tab). */
+.at-stage {
+  position: relative;
+}
+.am-toggle {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 9px 15px;
+  font: 600 0.84rem var(--font-sans);
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-2) 90%, var(--accent));
+  border: 1px solid color-mix(in srgb, var(--border-color) 60%, var(--accent));
+  border-radius: var(--radius-2);
+  box-shadow: 0 3px 10px rgba(var(--shadow-rgb), 0.4);
+  cursor: pointer;
+  transition:
+    color 0.14s ease,
+    border-color 0.14s ease,
+    background 0.14s ease,
+    box-shadow 0.14s ease;
+}
+.am-toggle:hover {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--surface-2) 80%, var(--accent));
+  box-shadow: 0 3px 14px rgba(var(--accent-rgb), calc(0.35 * var(--glow-a, 1)));
+}
+.am-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.am-toggle-ico {
+  width: 0;
+  height: 0;
+  border-left: 7px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: transform 0.2s ease;
+}
+.am-toggle.is-open {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.am-toggle.is-open .am-toggle-ico {
+  transform: rotate(90deg);
+}
+.am-drawer {
+  position: absolute;
+  left: 10px;
+  top: 52px; /* tucked under the toggle, not full-height */
+  width: 456px; /* roomy like the in-game panel — portrait + the 3×74 glyph grid + padding */
+  max-height: calc(100% - 64px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--surface-2) 90%, rgb(var(--am-accent, 150 150 150)));
+  border: 1px solid color-mix(in srgb, var(--border-color) 65%, rgb(var(--am-accent, 150 150 150)));
+  border-radius: var(--radius-3);
+  box-shadow: 0 12px 32px rgba(var(--shadow-rgb), 0.5);
+  overflow: visible; /* let the master-selector strip sit outside the right edge */
+  transform: translateX(calc(-100% - 18px)); /* slide off the left edge when closed */
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.26s ease,
+    opacity 0.26s ease;
+}
+.am-drawer.is-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.am-close {
+  position: absolute;
+  top: 9px;
+  right: 11px;
+  z-index: 2;
+  font-size: 0.95rem; /* size the ✕ glyph; .icb (icb--xs) provides the button look + focus ring */
+}
+/* master selector — vertical emblem strip on a backing WING that extends the panel's own
+   (accent-tinted) background past the right edge, so the emblems sit on the panel, not the canvas */
+.am-switch {
+  position: absolute;
+  left: 100%;
+  top: 64px;
+  margin-left: -1px; /* overlap the drawer's right border so the wing reads as one panel */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2-5);
+  padding: var(--space-3) 11px;
+  background: color-mix(in srgb, var(--surface-2) 90%, rgb(var(--am-accent, 150 150 150)));
+  border: 1px solid color-mix(in srgb, var(--border-color) 65%, rgb(var(--am-accent, 150 150 150)));
+  border-left: none;
+  border-radius: 0 var(--radius-3) var(--radius-3) 0;
+  box-shadow: 8px 10px 24px rgba(var(--shadow-rgb), 0.42);
+}
+.am-switch-btn {
+  width: 52px;
+  height: 52px;
+  padding: 0;
+  background: var(--surface-1) center top / cover no-repeat;
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, rgb(var(--am-accent, 150 150 150)));
+  border-radius: var(--radius-2);
+  box-shadow: 0 3px 10px rgba(var(--shadow-rgb), 0.45);
+  cursor: pointer;
+  filter: grayscale(0.5) brightness(0.62);
+  transition:
+    filter 0.14s ease,
+    box-shadow 0.14s ease,
+    transform 0.14s ease,
+    border-color 0.14s ease;
+}
+.am-switch-btn:hover {
+  filter: grayscale(0.1) brightness(0.92);
+  transform: translateX(2px);
+}
+/* the shared master-accent "lit" state (switch button + keystone cell); the glow strength rides
+   --am-on-glow so the two consumers differ only in that token */
+.am-switch-btn.is-active,
+.am-cell.is-on {
+  filter: none;
+  border-color: rgb(var(--am-accent));
+  box-shadow:
+    0 0 0 2px rgb(var(--am-accent)),
+    0 0 12px rgba(var(--am-accent), calc(var(--am-on-glow, 0.55) * var(--glow-a, 1)));
+}
+.am-switch-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* body: full-height character portrait on the left, keystone panel on the right */
+.am-body {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-4);
+}
+.am-portrait {
+  /* aspect-locked to the source art (280×640) and stretched to the body height, so the
+     full character shows with NO crop and the frame fills the left column edge-to-edge */
+  flex: 0 0 auto;
+  align-self: stretch;
+  aspect-ratio: 280 / 640;
+  margin: 0;
+  border: 1px solid color-mix(in srgb, var(--border-color) 50%, rgb(var(--am-accent, 150 150 150)));
+  border-radius: var(--radius-2);
+  overflow: hidden;
+  background: var(--surface-1);
+}
+.am-portrait-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* aspects match the box → fills with no crop */
+}
+/* centred title bar above the portrait+grid, mirroring the in-game panel header */
+.am-title {
+  text-align: center;
+  padding-bottom: 11px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 60%, rgb(var(--am-accent, 150 150 150)));
+}
+.am-name {
+  margin: 0;
+  font: 700 1.16rem var(--font-sans);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+.am-points {
+  margin: 5px 0 0;
+  font: 600 0.85rem var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+.am-points.is-full {
+  color: color-mix(in srgb, rgb(var(--am-accent)) 65%, var(--text-primary));
+}
+.am-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: min-content;
+  gap: 11px;
+  justify-items: center;
+  align-content: start;
+}
+.am-cell {
+  width: 74px;
+  height: 74px;
+  padding: 0;
+  background-repeat: no-repeat;
+  background-color: color-mix(in srgb, var(--surface-1) 84%, #000);
+  border: 1px solid color-mix(in srgb, var(--border-color) 82%, #000);
+  border-radius: var(--radius-2);
+  box-shadow: inset 0 1px 4px rgba(var(--shadow-rgb), 0.55); /* carved stone-tile recess */
+  cursor: pointer;
+  filter: saturate(0.7) brightness(0.82);
+  transition:
+    filter 0.14s ease,
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+.am-cell:hover {
+  filter: saturate(1) brightness(1.05);
+  border-color: rgb(var(--am-accent));
+}
+.am-cell.is-on {
+  --am-on-glow: 0.7; /* the shared lit-state rule lives with .am-switch-btn.is-active above */
+}
+.am-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+/* floating keystone tooltip — lives on .at-stage so it can spill over the canvas */
+.am-tip {
+  position: absolute;
+  z-index: 8;
+  width: 268px;
+  padding: 13px 15px;
+  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--border-color) 55%, rgb(var(--am-accent, 150 150 150)));
+  border-radius: var(--radius-2);
+  box-shadow: 0 10px 28px rgba(var(--shadow-rgb), 0.55);
+  pointer-events: none;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+.am-tip[hidden] {
+  display: none;
+}
+.am-tip-name {
+  margin: 0 0 7px;
+  font: 700 0.98rem var(--font-sans);
+  color: color-mix(in srgb, rgb(var(--am-accent, 150 150 150)) 65%, var(--text-primary));
+}
+/* selector-preview sub-line: "Points: X (4)" */
+.am-tip-sub {
+  margin: -3px 0 var(--space-2);
+  font: 600 0.76rem var(--font-mono);
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+}
+.am-tip-empty {
+  margin: 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.am-tip-stats {
+  margin: 0;
+  padding-left: 1.1em;
+  color: var(--text-primary);
+}
+.am-tip-stats li {
+  margin: var(--space-0-5) 0;
+}
+.am-tip-flav {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.am-tip-hint {
+  margin: var(--space-2) 0 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ── mobile: the 456px masters drawer + its master-switch wing (pinned off the right edge at left:100%)
+   can't fit a phone, so on narrow screens restack it. The body becomes a column (a small portrait banner
+   over the keystone grid — the 3×74 grid is only ~244px so it fits), and the switch wing drops from
+   off-canvas into a horizontal row inside the drawer. Width is capped so nothing clips off-screen. ── */
+@media (max-width: 560px) {
+  .am-drawer {
+    width: min(456px, calc(100% - 20px));
+  }
+  .am-body {
+    flex-direction: column;
+    align-items: center;
+  }
+  .am-portrait {
+    align-self: center;
+    width: 132px;
+    max-height: 200px; /* object-fit:cover crops to the upper body — keeps it a banner, not a tall column */
+  }
+  .am-switch {
+    position: static;
+    margin: var(--space-3) 0 0;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    border-left: 1px solid color-mix(in srgb, var(--border-color) 65%, rgb(var(--am-accent, 150 150 150)));
+    border-radius: var(--radius-3);
+  }
+}
+
+/* ── Atlas allocated-bonuses panel — always-on summary on the RIGHT of the canvas (mirrors the
+   masters drawer on the left, filling the otherwise-dead right column). Lists the COMBINED stats
+   of every allocated tree node; repeated stats are summed by statsPanel.ts. ── */
+/* toggle sits top-right (mirrors .am-toggle which is top-left) */
+.as-toggle {
+  left: auto;
+  right: 10px;
+}
+.as-panel {
+  position: absolute;
+  right: 10px;
+  top: 52px; /* tucked under the toggle */
+  /* cap to the canvas width so the open drawer never clips its left edge on a phone (it's a plain
+     vertical stat list, so it just narrows); the closed-state translateX is relative to this width. */
+  width: min(312px, calc(100% - 20px));
+  max-height: calc(100% - 64px);
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--surface-2) 92%, #000);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-3);
+  box-shadow: 0 12px 32px rgba(var(--shadow-rgb), 0.5);
+  overflow: hidden;
+  transform: translateX(calc(100% + 18px)); /* slide off the right edge when closed */
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.26s ease,
+    opacity 0.26s ease;
+}
+.as-panel.is-open {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.as-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3-5);
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 70%, var(--accent));
+}
+.as-close {
+  flex: 0 0 auto;
+  align-self: center;
+}
+.as-title {
+  font: 700 0.86rem var(--font-sans);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.as-count {
+  font: 700 0.8rem var(--font-mono);
+  color: var(--text-muted);
+}
+.as-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-1-5);
+  overflow-y: auto;
+}
+.as-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 7px var(--space-2);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  border-radius: var(--radius-1);
+}
+.as-stat:nth-child(odd) {
+  background: color-mix(in srgb, var(--surface-1) 55%, transparent);
+}
+.as-x {
+  flex: 0 0 auto;
+  font: 600 0.72rem var(--font-mono);
+  color: var(--text-muted);
+}
+.as-empty {
+  margin: 0;
+  padding: var(--space-3-5);
+  font-size: 0.8rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* item-details overlay — backdrop + panel glue only; the enriched card's look ships
+   with src/items/detailsPanel.css and the gear cards keep their #311 itc- styling */
+.itc-card[role='button'] {
+  cursor: pointer;
+}
+.itc-card[role='button']:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.idm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: var(--surface-overlay);
+}
+.idm {
+  position: relative;
+  width: min(460px, 100%);
+  max-height: min(82vh, 680px);
+  overflow: auto;
+}
+.idm-body {
+  width: 100%;
+}
+.idm-body > * {
+  width: 100%;
+}
+.idm-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  font-size: 0.95rem; /* size the ✕ glyph; .icb (icb--xs) provides the button look + focus ring */
+}
+
+/* item-base art in card headers (real game art from our own datamine; uniques get none —
+   their distinct art is not vendored and base art on a unique card would be wrong art) */
+.itc-art {
+  position: absolute;
+  top: 6px;
+  right: 12px;
+  background-repeat: no-repeat;
+  border-radius: 3px;
+  opacity: 0.95;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 3px rgb(0 0 0 / 0.5));
+}
+/* reserve room for the base-art icon ONLY on cards that actually render one — uniques/relics
+   and art-less bases draw no .itc-art, so they keep a symmetric centred title (was an
+   unconditional 52px pad that pushed unique names left of centre). */
+.itc-header:has(.itc-art) .itc-name {
+  padding-right: 52px;
 }

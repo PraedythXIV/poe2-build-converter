@@ -1,0 +1,113 @@
+name: badges
+
+# Dynamic README pills. On every push to main (and manual dispatch): run the test suite and a
+# desktop Lighthouse audit of the freshly built site, then publish shields.io "endpoint" JSONs
+# to the orphan `badges` branch (single force-pushed commit — no history growth). The README
+# reads them via img.shields.io/endpoint, so the pills always show MEASURED values, never
+# hand-stamped ones. Needs no secrets beyond the default GITHUB_TOKEN.
+#
+# Lighthouse here audits a local `vite preview` of the just-built dist/ — the badge reflects
+# the committed code, not whatever happens to be deployed on Pages.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# one badge publish at a time; newer pushes supersede an in-flight measurement
+concurrency:
+  group: badges
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The write-capable job token must not sit in .git/config while npm ci / npx run
+          # third-party code — the publish step below carries its own explicit token.
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # keep all workflows on the same Node (data-refresh.yml set the pace)
+          cache: npm
+      - run: npm ci
+
+      # `|| true`: vitest exits non-zero on a red suite but still writes the JSON report —
+      # a failing suite should publish a red "N failing" pill, not abort the badge run.
+      # If the report file is missing entirely (infra failure), the node step below fails loud.
+      - name: Measure tests
+        run: |
+          npx vitest run --reporter=json --outputFile="$RUNNER_TEMP/vitest.json" || true
+          node <<'EOF'
+          const fs = require('fs');
+          const r = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/vitest.json', 'utf8'));
+          const ok = r.success && r.numFailedTests === 0;
+          // suite-level failures (import/collection errors) set success:false with 0 failed tests
+          const message = ok ? `${r.numPassedTests} passing`
+            : r.numFailedTests > 0 ? `${r.numFailedTests} failing` : 'suite error';
+          fs.mkdirSync('badges-out', { recursive: true });
+          fs.writeFileSync('badges-out/tests.json', JSON.stringify({
+            schemaVersion: 1,
+            label: 'tests',
+            message,
+            color: ok ? 'brightgreen' : 'red',
+          }));
+          console.log(fs.readFileSync('badges-out/tests.json', 'utf8'));
+          EOF
+
+      - name: Build the site
+        run: npm run build
+
+      # Exact version pin (not @12): identical commits must measure with identical tooling.
+      # 3 runs, median per category: perf on a shared runner varies a few points run-to-run;
+      # the median keeps the pill honest without flapping (a11y/bp/seo are deterministic).
+      - name: Lighthouse (desktop, median of 3) against the built site
+        run: |
+          npm run preview -- --port 4173 &
+          for i in $(seq 1 30); do curl -sf http://localhost:4173/ >/dev/null && break; sleep 1; done
+          for i in 1 2 3; do
+            npx --yes lighthouse@12.8.2 http://localhost:4173/ \
+              --preset=desktop \
+              --output=json --output-path="$RUNNER_TEMP/lighthouse-$i.json" \
+              --chrome-flags="--headless=new --no-sandbox" \
+              --quiet
+          done
+          node <<'EOF'
+          const fs = require('fs');
+          const runs = [1, 2, 3].map((i) =>
+            JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/lighthouse-${i}.json`, 'utf8')));
+          const cats = { performance: 'perf', accessibility: 'a11y', 'best-practices': 'best practices', seo: 'seo' };
+          for (const [id, label] of Object.entries(cats)) {
+            const scores = runs.map((r) => {
+              const score = r.categories[id]?.score;
+              if (score == null) throw new Error(`Lighthouse category missing: ${id}`);
+              return Math.round(score * 100);
+            }).sort((a, b) => a - b);
+            const n = scores[1];
+            const color = n >= 90 ? 'brightgreen' : n >= 50 ? 'orange' : 'red';
+            fs.writeFileSync(`badges-out/lighthouse-${id}.json`,
+              JSON.stringify({ schemaVersion: 1, label, message: String(n), color }));
+            console.log(`${id}: ${scores.join('/')} -> ${n}`);
+          }
+          EOF
+
+      # Orphan single-commit branch, force-pushed each run: raw.githubusercontent.com serves the
+      # files to shields.io and repo history never grows. The bot identity is GitHub's own.
+      - name: Publish to the badges branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd badges-out
+          git init -q -b badges
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "badges for ${GITHUB_SHA}"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:badges
+          echo "published: $(ls)" >> "$GITHUB_STEP_SUMMARY"

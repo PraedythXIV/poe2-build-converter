@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+  <Build level="90" className="Warrior" ascendClassName="Warbringer" mainSocketGroup="1">
+    <PlayerStat stat="TotalDPS" value="100000"/>
+  </Build>
+  <Tree activeSpec="1">
+    <Spec classId="6" ascendClassId="3" treeVersion="0_5" ascendancyInternalId="Warrior3" title="Endgame" nodes="49072,12412,5"/>
+    <Spec classId="6" ascendClassId="3" treeVersion="0_5" ascendancyInternalId="Warrior3" title="Levelling" nodes="49072"/>
+  </Tree>
+  <Skills activeSkillSet="1">
+    <SkillSet id="1" title="Endgame">
+      <Skill mainActiveSkill="1"><Gem gemId="g1" skillId="Metadata/Items/Gems/SkillGemBoneShatter" nameSpec="Boneshatter" level="20" quality="0"/></Skill>
+    </SkillSet>
+    <SkillSet id="2" title="Levelling">
+      <Skill mainActiveSkill="1"><Gem gemId="g2" skillId="Metadata/Items/Gems/SkillGemSunder" nameSpec="Sunder" level="1" quality="0"/></Skill>
+    </SkillSet>
+  </Skills>
+  <Items activeItemSet="1">
+    <ItemSet id="1" title="Endgame"/>
+    <ItemSet id="2" title="Levelling"/>
+  </Items>
+  <Config activeConfigSet="1">
+    <ConfigSet id="1" title="Endgame"/>
+    <ConfigSet id="2" title="Levelling"/>
+  </Config>
+</PathOfBuilding2>

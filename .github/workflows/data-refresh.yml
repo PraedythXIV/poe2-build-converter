@@ -1,0 +1,140 @@
+# Scheduled game-data self-refresh.
+#
+# Every 6 hours (and on manual dispatch): probe the live PoE2 patch server and the GGG
+# tree-export repo. If either moved past the committed data-version.json marker, re-run the
+# WHOLE data pipeline (scripts/refresh-data.mjs) and open a PR with the refreshed artifacts.
+# Never pushes to main, never auto-merges.
+#
+# Safety model (owner: "every data source self-updates EXCEPT across major version changes"):
+#   - MAJOR patch bump (first version segment changes, e.g. 4.x -> 5.x): auto-refresh is PAUSED
+#     and the run emits a warning for a human — table schemas/joins can break across a major.
+#   - minor/patch bump: build everything, then scripts/diff-data.mjs classifies the diff vs the
+#     pre-refresh snapshot. A STRUCTURAL regression (shape change, >10% row-collapse, raw stat-id
+#     leak) doesn't abort the run, but it flags the PR "needs-review" so it is never merged blind.
+#     A clean / content-only diff opens an ordinary review PR.
+#
+# Assumes NO secrets beyond the default GITHUB_TOKEN (create-pull-request uses it). The repo
+# owner enables/pushes this workflow.
+
+name: data-refresh
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Patch probe is dependency-free, safe before npm ci.
+      - name: Probe live PoE2 patch + tree export
+        id: live
+        run: |
+          PATCH=$(node scripts/patch-version.mjs --json | jq -r .patch)
+          TREE_SHA=$(curl -sf -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/grindinggear/poe2-skilltree-export/commits/main | jq -r .sha)
+          echo "patch=$PATCH" >> "$GITHUB_OUTPUT"
+          echo "tree_sha=$TREE_SHA" >> "$GITHUB_OUTPUT"
+          echo "live: patch=$PATCH tree=$TREE_SHA"
+
+      - name: Compare against committed data-version.json
+        id: diff
+        run: |
+          CUR_PATCH=$(jq -r .poe2Patch data-version.json)
+          CUR_TREE=$(jq -r .treeSha data-version.json)
+          LIVE_PATCH="${{ steps.live.outputs.patch }}"
+          LIVE_TREE="${{ steps.live.outputs.tree_sha }}"
+          if [ "$CUR_PATCH" != "$LIVE_PATCH" ] || [ "$CUR_TREE" != "$LIVE_TREE" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "data moved: $CUR_PATCH -> $LIVE_PATCH, $CUR_TREE -> $LIVE_TREE"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "up to date"
+          fi
+          # Major = first version segment of the game patch (4.x.y.z). A major bump can break
+          # table schemas/joins, so we pause auto-refresh and let a human drive it.
+          if [ "$(echo "$CUR_PATCH" | cut -d. -f1)" != "$(echo "$LIVE_PATCH" | cut -d. -f1)" ]; then
+            echo "major=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "major=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pause on major version bump
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'true'
+        run: |
+          MSG="Major PoE2 version bump detected (${{ steps.live.outputs.patch }}). Auto-refresh paused — data joins/schemas may have changed; refresh manually with \`npm run data:refresh\` and review."
+          echo "::warning title=data-refresh paused::$MSG"
+          { echo "## ⚠ data-refresh paused"; echo "$MSG"; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install dependencies
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'false'
+        run: npm ci
+
+      # Full pipeline: extract -> vendored lookups -> tree/atlas/genesis graphs -> emotions/jewel
+      # -> art atlases, then an internal diff gate. --accept-structural keeps the run going so the
+      # dedicated gate step below can classify the result and still open a review PR.
+      - name: Refresh all game data
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'false'
+        run: node scripts/refresh-data.mjs --accept-structural
+
+      # Structural-regression gate. refresh-data.mjs left the pre-refresh snapshot in
+      # _workbench/data-extract/.refresh-ref; classify the rebuilt src/data against it. continue-on-error so
+      # a structural verdict (exit 1) flags the PR instead of killing the job.
+      - name: Structural-diff gate
+        id: gate
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'false'
+        continue-on-error: true
+        run: |
+          # `|| STATUS=$?` keeps the default `-e` shell from aborting before we record the verdict
+          # and close the code fence; we re-raise it at the end so a structural exit flags the PR.
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          node scripts/diff-data.mjs _workbench/data-extract/.refresh-ref > diff.txt 2>&1 || STATUS=$?
+          cat diff.txt | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          exit ${STATUS:-0}
+
+      - name: Verify suite still green on refreshed data
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'false'
+        run: npx vitest run
+
+      - name: Open PR with refreshed data
+        if: steps.diff.outputs.changed == 'true' && steps.diff.outputs.major == 'false'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: data-refresh/auto
+          commit-message: |
+            Refresh game data to patch ${{ steps.live.outputs.patch }}
+
+            Auto-refresh: PoE2 patch ${{ steps.live.outputs.patch }}, tree export ${{ steps.live.outputs.tree_sha }}.
+          title: >-
+            ${{ steps.gate.outcome == 'failure' && '⚠ Data refresh (STRUCTURAL — review)' || 'Data refresh' }}:
+            PoE2 ${{ steps.live.outputs.patch }}
+          labels: >-
+            ${{ steps.gate.outcome == 'failure' && 'data-refresh,needs-review' || 'data-refresh' }}
+          body: |
+            Automated game-data refresh.
+
+            - PoE2 patch: `${{ steps.live.outputs.patch }}`
+            - Tree export: `grindinggear/poe2-skilltree-export@${{ steps.live.outputs.tree_sha }}`
+            - Structural-diff gate: **${{ steps.gate.outcome == 'failure' && '⚠ STRUCTURAL — do not merge without review' || '✅ clean / content-only' }}**
+
+            The full per-file diff classification is in this run's **Structural-diff gate** step
+            (and job summary). Review the `src/data` + `src/assets` diffs before merging — this PR is
+            never auto-merged.
+          add-paths: |
+            src/data
+            src/assets
+            data-version.json
+          delete-branch: true

@@ -1,0 +1,31 @@
+name: CI
+
+# Validation only — runs tests + license/provenance guards on every push & PR.
+# It does NOT build for release, deploy, or publish anything (that's deploy.yml, manual).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22 # keep all workflows on the same Node (data-refresh.yml set the pace)
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit # typecheck (vitest transpiles without checking) — fail fast on type errors
+      - run: npm run lint # eslint (correctness)
+      - run: npm run format:check # prettier (formatting)
+      - run: npm test
+      - run: npm run check:licenses # fail if any dependency isn't permissively licensed
+      - run: npm run check:provenance # fail if a restricted dep/marker slipped in
+      - run: npm run check:dedupe # fail if copy-paste duplication grows past the ratchet (.jscpd.json)

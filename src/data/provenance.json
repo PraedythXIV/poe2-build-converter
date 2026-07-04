@@ -1,15 +1,20 @@
 {
-  "captured": "2026-06-05",
+  "captured": "2026-07-04",
+  "poe2Patch": "4.5.4.3",
+  "schema": {
+    "version": 7,
+    "createdAt": "2026-06-27T06:56:26.000Z"
+  },
   "sources": {
-    "tree": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/main/data.json",
-    "gems": "https://repoe-fork.github.io/poe2/skill_gems.json",
-    "uniques": "https://repoe-fork.github.io/poe2/uniques.json"
+    "tree": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/1e9eb2d8c1946398c3aaaacfbaead5c75c0d1fa6/data.json",
+    "gems": "own pathofexile-dat extraction (BaseItemTypes + SkillGems @ 4.5.4.3)",
+    "uniques": "own pathofexile-dat extraction (Words, Wordlist 6 @ 4.5.4.3)"
   },
   "counts": {
     "passiveNodes": 4912,
     "ascendancies": 25,
-    "gems": 1186,
-    "uniques": 441
+    "gems": 1189,
+    "uniques": 1784
   },
   "note": "This product isn't affiliated with or endorsed by Grinding Gear Games in any way."
 }

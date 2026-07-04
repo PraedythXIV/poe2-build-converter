@@ -1,0 +1,78 @@
+/* ui-component-library — css/utilities.css
+   OPT-IN layout primitives + a11y/visibility helpers. This file is NOT part of
+   components.css — link it only if you want the layout layer:
+
+     <link rel="stylesheet" href="themes/default.css">   <!-- tokens -->
+     <link rel="stylesheet" href="css/components.css">    <!-- components -->
+     <link rel="stylesheet" href="css/utilities.css">     <!-- this layer -->
+
+   Philosophy: this is deliberately NOT a Tailwind clone — no per-element color /
+   size / transform soup that would fight the token contract. It's ~a dozen
+   composable, intrinsically-responsive primitives (Every-Layout style: auto-fit
+   grids, flex-basis sidebars — almost no media queries) that read the design
+   tokens, plus the visibility/a11y helpers the components were duplicating.
+
+   Every primitive is tunable per-instance via a `--u-*` custom property, e.g.
+     <div class="u-grid" style="--u-min: 12rem; --u-gap: var(--space-6)"> … </div>
+   Gaps default to the --space-* scale, so they respect global density + reskin.
+   Logical properties (margin-inline / text-align:start) keep them RTL-safe. */
+
+/* ── STACK — vertical flow with consistent rhythm (the most-reached-for one) ── */
+.u-stack { display: flex; flex-direction: column; gap: var(--u-gap, var(--space-4)); }
+.u-stack > * { margin-block: 0; }                 /* normalize child collapse */
+
+/* ── CLUSTER — a wrapping row of items (toolbars, chip rows, button groups) ── */
+.u-cluster {
+  display: flex; flex-wrap: wrap;
+  gap: var(--u-gap, var(--space-3));
+  align-items: var(--u-align, center);
+  justify-content: var(--u-justify, flex-start);
+}
+
+/* ── CENTER — center a column horizontally with a comfortable max measure ──── */
+.u-center {
+  box-sizing: content-box;
+  margin-inline: auto;
+  max-width: var(--u-measure, 70ch);
+  padding-inline: var(--u-gutter, var(--space-4));
+}
+
+/* ── GRID — responsive auto-fit grid; columns size to --u-min, no breakpoints ─ */
+.u-grid {
+  display: grid;
+  gap: var(--u-gap, var(--space-4));
+  grid-template-columns: repeat(auto-fit, minmax(min(var(--u-min, 16rem), 100%), 1fr));
+}
+
+/* ── SIDEBAR — sidebar + main that wraps when main gets too narrow (no media) ─
+   --u-side = sidebar's ideal width · --u-main-min = main's % before it wraps   */
+.u-sidebar { display: flex; flex-wrap: wrap; gap: var(--u-gap, var(--space-4)); }
+.u-sidebar > :first-child { flex: 1 1 var(--u-side, 16rem); }
+.u-sidebar > :last-child { flex: 999 1 var(--u-main-min, 50%); }
+.u-sidebar--end > :first-child { flex: 999 1 var(--u-main-min, 50%); }   /* sidebar on the right */
+.u-sidebar--end > :last-child { flex: 1 1 var(--u-side, 16rem); }
+
+/* ── COVER — fill a min height, push one block to the vertical centre.
+   Defaults to the viewport (--u-minh:100dvh) like Every-Layout's Cover: a `100%`
+   default would silently collapse to content height unless the parent already has
+   a definite block-size. Set --u-minh for an embedded/section cover. ─────────── */
+.u-cover { display: flex; flex-direction: column; min-block-size: var(--u-minh, 100dvh); gap: var(--u-gap, var(--space-4)); }
+.u-cover > .u-cover-center { margin-block: auto; }
+
+/* ── FRAME — aspect-ratio media box (image/video/canvas crop) ─────────────── */
+.u-frame { aspect-ratio: var(--u-ratio, 16 / 9); overflow: hidden; display: flex; }
+.u-frame > img, .u-frame > video, .u-frame > canvas, .u-frame > svg { inline-size: 100%; block-size: 100%; object-fit: var(--u-fit, cover); }
+
+/* ── a11y + visibility helpers (the canonical versions; components had ~8 copies) ── */
+.u-sr-only {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.u-sr-only-focusable:not(:focus):not(:focus-within) {
+  position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+.u-hidden { display: none !important; }
+.u-text-start { text-align: start; }
+.u-text-center { text-align: center; }
+.u-text-end { text-align: end; }

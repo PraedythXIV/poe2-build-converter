@@ -1,0 +1,26 @@
+{
+  "_provenance": {
+    "source": "GGG PoE2 game data via pathofexile-dat (AtlasClassPassiveClasses.MasterNormal)",
+    "captured": "2026-07-04",
+    "counts": {
+      "portraits": 3,
+      "decodeMisses": 0
+    },
+    "note": "Atlas-master portrait art © Grinding Gear Games. Not affiliated with or endorsed by GGG."
+  },
+  "Doryani": {
+    "src": "atlas-master-doryani.webp",
+    "w": 158,
+    "h": 360
+  },
+  "Hilda": {
+    "src": "atlas-master-hilda.webp",
+    "w": 158,
+    "h": 360
+  },
+  "Jado": {
+    "src": "atlas-master-jado.webp",
+    "w": 158,
+    "h": 360
+  }
+}

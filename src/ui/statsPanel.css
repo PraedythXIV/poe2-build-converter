@@ -1,0 +1,133 @@
+/* C1 — stats panel. Token-driven only (all colours/fonts/radii come from styles.css custom
+   properties); the group header mirrors .bc-col-hd and the all-stats list reuses the
+   column-width wrap trick from #bc-perks so the panel reads like the rest of the preview. */
+
+.sp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+  min-width: 0;
+}
+
+/* one-line honesty caption — these are PoB's numbers, not ours */
+.sp-cap {
+  margin: 0;
+  font: 500 10.5px/1.5 var(--font-mono);
+  color: var(--text-secondary);
+}
+
+.sp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-4) 26px;
+}
+
+.sp-group {
+  min-width: 0;
+}
+/* the shared panel-section heading recipe lives in styles.css (.bc-col-hd, .sp-hd) — this lazy
+   chunk keeps only the stats panel's own border/margin specifics */
+.sp-hd {
+  margin: 0 0 var(--space-2);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 5px;
+}
+
+.sp-rows {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sp-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2-5);
+  font: 500 12px var(--font-mono);
+}
+.sp-row dt {
+  color: var(--text-secondary);
+  min-width: 0;
+}
+.sp-row dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* value annotations */
+.sp-unit {
+  font-style: normal;
+  color: var(--text-muted);
+  margin-left: 1px;
+}
+.sp-sub {
+  color: var(--text-muted);
+  font-size: 10.5px;
+}
+.sp-over {
+  font-style: normal;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  margin-left: var(--space-1);
+}
+
+/* resist / requirement colour-coding (status tokens; colour is reinforced by the value itself) */
+.sp-good {
+  color: var(--status-success);
+}
+.sp-mid {
+  color: var(--status-warning);
+}
+.sp-bad {
+  color: var(--status-danger-text);
+}
+
+/* collapsed full table */
+.sp-all summary {
+  cursor: pointer;
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: var(--label-transform);
+  color: var(--text-secondary);
+}
+.sp-all summary:hover {
+  color: var(--text-primary);
+}
+.sp-all summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-1);
+}
+.sp-all[open] summary {
+  margin-bottom: var(--space-2);
+}
+.sp-all-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 11px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+  column-width: 15rem;
+  column-gap: 26px;
+}
+.sp-all-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2-5);
+  break-inside: avoid;
+  font: 500 11px var(--font-mono);
+  line-height: 1.7;
+}
+.sp-all-list .sp-k {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+.sp-all-list .sp-v {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

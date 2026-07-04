@@ -22,12 +22,8 @@ SOFTWARE.
 
 ---
 
-The MIT license above covers this project's OWN source code only.
-
-Game data and identifiers (passive/gem/item/inventory ids, etc.) belong to
-Grinding Gear Games. The vendored lookup tables in src/data/ are derived at
-build time from publicly available data published by Grinding Gear Games
-(poe2-skilltree-export) and the community RePoE-fork PoE2 datamine; that data
-is not relicensed here — refresh it from source rather than treating it as
-MIT. This product isn't affiliated with or endorsed by Grinding Gear Games in
-any way.
+The MIT license above covers this project's own source code only. The bundled
+Path of Exile 2 game data and art (src/data/, src/assets/) are © Grinding Gear
+Games — extracted from GGG's official tree export and our own datamine of GGG's
+game files, not relicensed here. See THIRD-PARTY-NOTICES.md for full provenance.
+Not affiliated with or endorsed by Grinding Gear Games in any way.

@@ -1,0 +1,89 @@
+/* Item details panel (idp-) — per-mod affix-tier chips shown inside the #311 itc-card tooltip
+   language defined in src/styles.css. Token-driven only (no raw colors); the chip reads as a
+   quiet mono badge so the mod text stays the headline. T1 (strongest — see src/items/tiers.ts)
+   gets the currency-gold accent; unknown (and out-of-range) lines stay muted — approximate
+   matches are never rendered as tiers. */
+
+.idp-card .itc-body {
+  padding-bottom: var(--space-3);
+}
+
+/* mod row: text + chip on one line, chip pushed right, wraps under on narrow cards */
+.idp-mod {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-2-5);
+  flex-wrap: wrap;
+}
+.idp-mod-text {
+  min-width: 0;
+}
+
+/* ── tier chip ── */
+.idp-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-1-5);
+  flex: none;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text-muted) 38%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 72%, transparent);
+  font: 600 0.62rem var(--font-mono);
+  letter-spacing: 0.05em;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  cursor: default;
+}
+.idp-chip b {
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent) 72%, var(--text-primary));
+}
+.idp-chip i {
+  font-style: normal;
+  color: var(--text-muted);
+}
+.idp-roll {
+  color: color-mix(in srgb, var(--text-primary) 80%, var(--text-secondary));
+}
+.idp-ilvl {
+  color: var(--text-muted);
+}
+
+/* T1 — the family's strongest tier */
+.idp-chip--top {
+  border-color: color-mix(in srgb, var(--poe-currency) 55%, transparent);
+  background:
+    radial-gradient(120% 160% at 50% 120%, color-mix(in srgb, var(--poe-currency) 14%, transparent), transparent 70%),
+    color-mix(in srgb, var(--surface-2) 72%, transparent);
+}
+.idp-chip--top b {
+  color: var(--poe-currency);
+}
+
+/* no tier data for this line (also used when a value falls outside every stored roll range) */
+.idp-chip--unknown {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--text-muted) 28%, transparent);
+  color: var(--text-muted);
+  background: transparent;
+}
+
+/* compact variant for the gear gallery (tier index only) */
+.idp-chip--inline {
+  gap: var(--space-0-5);
+  padding: 0 5px;
+  margin-left: var(--space-1-5);
+  vertical-align: 1px;
+}
+
+/* honest footnote ("tiers unknown" / "unique rolls are fixed") */
+.idp-note {
+  margin-top: var(--space-2);
+  font-size: 0.72rem;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--text-muted);
+}

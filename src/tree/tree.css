@@ -1,0 +1,226 @@
+/* B1 — passive-tree panel, canvas, tooltip, and toolbar. Token-driven only (contract in
+   src/styles.css). The tooltip speaks the bc-/itc- visual language: a tier-tinted card
+   (gradient border + tinted header glow) where the tier colour tracks the node kind. */
+
+/* ── panel + canvas ── */
+/* warm-on-cool inversion: the tree floats on the reserved cool void ramp, so the gold
+   allocated path (--poe-node-on, painted on canvas) reads as the brightest thing here */
+/* PoB weapon-set tints (--tree-ws1/ws2) are read here (legend swatches) and by resolvePalette on
+   canvas; they live in the app token block in src/styles.css (single source — see the note there). */
+.tree-view {
+  position: relative;
+  min-height: 480px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-3);
+  background: radial-gradient(120% 120% at 50% 38%, var(--poe-void-2), var(--poe-void) 72%);
+  overflow: hidden;
+}
+/* the wrapper is focusable (tabindex) so Ctrl+Z/Y stay scoped to the tree, not the page */
+.tree-view:focus {
+  outline: none;
+}
+.tree-view:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+.tree-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none; /* pointer-event pan/zoom owns all gestures */
+}
+.tree-canvas:active {
+  cursor: grabbing;
+}
+
+/* ── tooltip ── */
+/* the tooltip is now just a positioning shell — the library's itc-card (vendored in
+   components.subset.css) owns the whole surface (rim, header, mods, flavour). Keep this
+   transparent and let the card render inside it. */
+.tree-tip {
+  position: absolute;
+  z-index: 3;
+  width: min(330px, 90vw);
+  pointer-events: none;
+}
+/* a tooltip carrying a "Select a bonus" mastery becomes clickable so its options can be picked */
+.tree-tip.is-interactive {
+  pointer-events: auto;
+}
+/* PINNED (touch) picker: a tap-opened popover anchored to the node — give it a clear lifted ring so it
+   reads as a modal surface, not a passing hover tooltip */
+.tree-tip.is-pinned {
+  z-index: 5;
+  filter: drop-shadow(0 6px 18px rgba(var(--shadow-rgb), 0.55));
+}
+.tree-tip.is-pinned .itc-card {
+  outline: 1px solid color-mix(in srgb, var(--border-color) 30%, var(--accent));
+  outline-offset: 1px;
+}
+/* Close / Remove actions — only rendered inside the pinned picker (touch's dismiss + deallocate) */
+.itc-tip-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 9px;
+}
+/* shared button chrome for the pinned-picker actions AND the multi-option chooser rows */
+.itc-tip-act,
+.itc-choice {
+  font: inherit;
+  color: var(--text-secondary);
+  background: color-mix(in srgb, var(--surface-1) 80%, #000);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+  cursor: pointer;
+  transition:
+    color 0.12s ease,
+    border-color 0.12s ease,
+    background 0.12s ease;
+}
+.itc-tip-act:hover,
+.itc-choice:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--border-color) 40%, var(--accent));
+}
+.itc-tip-act {
+  flex: 1;
+  padding: var(--space-2) var(--space-2-5);
+}
+.itc-tip-act--remove {
+  color: color-mix(in srgb, var(--text-secondary) 55%, var(--status-danger));
+  border-color: color-mix(in srgb, var(--border-color) 60%, var(--status-danger));
+}
+.itc-tip-act--remove:hover {
+  color: var(--status-danger-text);
+  border-color: var(--status-danger-text);
+  background: color-mix(in srgb, var(--surface-1) 70%, var(--status-danger) 8%);
+}
+.itc-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 7px;
+}
+.itc-choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 9px;
+  text-align: left;
+}
+.itc-choice:hover {
+  background: color-mix(in srgb, var(--surface-1) 62%, #000);
+}
+.itc-choice.is-on {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.14);
+}
+.itc-choice-n {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  font: 700 0.78rem var(--font-mono);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--surface-2) 50%, #000);
+  border: 1px solid color-mix(in srgb, var(--border-color) 50%, var(--accent));
+  border-radius: var(--radius-1);
+}
+.itc-choice.is-on .itc-choice-n {
+  color: var(--surface-1);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.itc-choice-txt {
+  flex: 1;
+  line-height: 1.35;
+}
+
+/* ── toolbar fragment (search + fit + allocated count) ── */
+.ttb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* central-art visibility toggle */
+.ttb-bg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  font: 500 12px var(--font-mono);
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.ttb-bg input {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+/* the search field is the vendored .in-input, compacted to the toolbar row (mono, tight padding) */
+.ttb-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: var(--space-1-5) var(--space-2-5);
+  font: 500 12px var(--font-mono);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.ttb-search:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    0 0 10px rgba(var(--accent-rgb), calc(0.35 * var(--glow-a)));
+}
+/* Fit is the vendored .ix-btn, compacted to the toolbar row (the pg- idiom) */
+.ttb-fit.ix-btn {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 0 var(--space-3);
+  font: 600 10.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+.ttb-fit:hover {
+  color: var(--text-primary);
+}
+.ttb-count {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: var(--space-1) var(--space-2-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+}
+.ttb-count b {
+  font: 700 14px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+/* 11px secondary (was 9px muted) — owner-reported too small/hard to read on the Convert tree step;
+   the asc/ws segments carry real counts, so they get the same legibility bump as the labels */
+.ttb-count span {
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: var(--label-transform);
+  color: var(--text-secondary);
+}
+.ttb-count-asc {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* over a cap (123 passives / 8 ascendancy) — warn colour on the offending segment */
+.ttb-count .ttb-over {
+  color: var(--status-warning);
+}

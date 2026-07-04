@@ -1,5 +1,6 @@
 import type { PobBuild, BuildSkill, Warning } from './types'
 import { gemInfo } from './lookups'
+import { copy } from '../copy'
 
 export interface MappedSkills {
   skills: (string | BuildSkill)[]
@@ -8,12 +9,13 @@ export interface MappedSkills {
 }
 
 /**
- * Map PoB socket groups to `.build` skills, matching poe.ninja's authoritative output exactly:
- * each socket group becomes ONE `skills[]` entry whose `id` is the group's FIRST gem, with every
- * other gem listed under `support_skills` VERBATIM — even other active gems (e.g. a Whirling Assault
- * that shares a Hollow Form's socket group is emitted as a "support"). Gem ids pass through unchanged,
- * including the singular/plural "Gem"/"Gems" inconsistency. Auto-generated groups (source="Tree:…" /
- * "Item:…", i.e. tree-/item-GRANTED skills) are skipped — poe.ninja drops them too.
+ * Map PoB socket groups to `.build` skills, following the in-game `.build` structure (verified
+ * against real exports): each socket group becomes ONE `skills[]` entry whose `id` is the group's
+ * FIRST gem, with every other gem listed under `support_skills` VERBATIM — even other active gems
+ * (e.g. a Whirling Assault that shares a Hollow Form's socket group is emitted as a "support"). Gem
+ * ids pass through unchanged, including the singular/plural "Gem"/"Gems" inconsistency. Auto-generated
+ * groups (source="Tree:…" / "Item:…", i.e. tree-/item-GRANTED skills) are skipped — they aren't real
+ * socketed skills, so the export omits them.
  */
 export function mapSkills(pob: PobBuild, warnings: Warning[]): MappedSkills {
   const skills: (string | BuildSkill)[] = []
@@ -42,7 +44,7 @@ export function mapSkills(pob: PobBuild, warnings: Warning[]): MappedSkills {
     warnings.push({
       level: 'warn',
       code: 'gem-id-unknown',
-      message: `${unknownGems.size} gem id(s) were not in the vendored gem table (may be new/renamed); emitted verbatim. Examples: ${[...unknownGems].slice(0, 6).join(', ')}.`,
+      message: copy.warn.gemIdUnknown(unknownGems.size, [...unknownGems].slice(0, 6).join(', ')),
     })
   }
 

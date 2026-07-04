@@ -1,0 +1,34 @@
+/* Genesis Tree womb-keystone TOOLTIP styles (.gc-*). Token-driven so it themes with the rest of the
+   app. The standalone "Crafting reference" card was removed 2026-06-27 (it's all shown on the tree's
+   womb tooltips now); only the tooltip pieces remain. */
+
+.gc-womb-arrow {
+  color: rgb(var(--gc-rgb));
+  font-weight: 700;
+}
+
+/* ── Womb keystone TOOLTIP — the Wombgift reference shown on the genesis tree's 5 womb nodes ── */
+.gc-womb-tip-map {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.gc-womb-tip-baseshd {
+  margin-top: var(--space-2);
+}
+.gc-tip-bases {
+  list-style: none;
+  margin: 5px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.gc-tip-bases li {
+  padding: 3px 9px;
+  font: 600 0.78rem var(--font-sans);
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-pill);
+}

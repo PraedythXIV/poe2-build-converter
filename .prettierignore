@@ -1,0 +1,8 @@
+dist/
+node_modules/
+_workbench/
+src/vendor/
+src/data/
+src/assets/
+package-lock.json
+*.min.*

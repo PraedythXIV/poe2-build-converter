@@ -1,209 +1,897 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" data-theme="poe2">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>PoE2 Build Converter — PoB2 import code → .build</title>
+    <meta
+      name="description"
+      content="Convert a Path of Building 2 export into an in-game Path of Exile 2 .build (Build Planner) file, and plan passive, atlas & genesis trees — free, in your browser, no install."
+    />
+    <title>PoE 2 - Sweet Vision — PoB2 import code → .build</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="/src/styles.css" />
+    <!-- Two pre-paint gates, BEFORE any body element is painted (this runs while the body is still being parsed):
+         1. Saved theme — so a light-preferring visitor never flashes the dark theme.
+         2. Deep-link route — a direct visit to #atlas / #genesis / … sets data-boot-route on <html>; the inlined
+            CSS then hides the default Convert route and shows the target up-front, so the FIRST paint is already
+            the right route. Without this, Chrome paints Convert first and the deferred main.ts swaps routes,
+            shoving the footer ~500px down (a large layout shift). main.ts clears the attribute once it routes.
+         The full theme toggle (persist + marble/canvas recolour) and routing live in main.ts; these are just gates. -->
+    <script>
+      try {
+        if (localStorage.getItem('poe2-theme') === 'light') document.documentElement.classList.add('theme-light')
+      } catch (e) {
+        /* storage blocked (private mode / file://) — fall back to the default dark theme */
+      }
+      try {
+        // Only the two CANVAS routes are gated: their stage height is reserved in CSS, so painting them
+        // up-front is shift-free. The other routes are JS-populated (empty at first paint), so showing them
+        // early would expose that growth as a shift — they keep the populate-while-hidden-then-show path.
+        // (Gating emotions to front-load its static .tc-note LCP element was tried — Lighthouse's lantern
+        // model doesn't credit the earlier paint and FCP got slightly worse, so it was reverted.)
+        const bootHash = location.hash.replace(/^#/, '').split('=')[0]
+        if (['atlas', 'genesis'].indexOf(bootHash) >= 0)
+          document.documentElement.setAttribute('data-boot-route', bootHash)
+      } catch (e) {
+        /* no hash / blocked — main.ts routes normally */
+      }
+    </script>
   </head>
   <body>
     <!-- marble shader wallpaper (red), behind everything, non-interactive, toggle-able -->
     <canvas id="bg" aria-hidden="true"></canvas>
     <div class="wrap">
       <div class="wrap-main">
-      <h1 class="sr-only">PoE2 Build Converter — Path of Building 2 import code to .build file</h1>
-      <header class="hd-bar" role="banner">
-        <a class="hd-brand" href="./" aria-label="PoE2 Build Converter — home">
-          <span class="hd-mark" aria-hidden="true">◈</span>
-          <span class="hd-name">PoE2 Build <b>Converter</b></span>
-        </a>
-        <div class="hd-actions">
-          <button
-            class="hd-iconbtn hd-bg-toggle on"
-            type="button"
-            id="bg-toggle"
-            aria-label="Toggle the animated background"
-            aria-pressed="true"
-            title="Toggle the animated background"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-            </svg>
-          </button>
-          <a
-            class="hd-iconbtn"
-            href="https://github.com/PraedythXIV/poe2-build-converter"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Source on GitHub"
-            title="Source on GitHub"
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.39.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85l-.01 2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z" />
-            </svg>
-          </a>
-        </div>
-      </header>
-      <p class="app-tagline">
-        Turn a Path of Building 2 export into a Path of Exile 2 Build Planner
-        <code>.build</code> file you can import in-game.
-      </p>
-
-      <main>
-        <!-- conversion flow: state driven by renderStepper() in main.ts -->
-        <div class="sx" id="stepper" style="--n: 4">
-          <nav aria-label="Conversion progress">
-            <ol class="sx-steps">
-              <li class="sx-step" data-state="current" aria-current="step" style="--i: 0">
-                <span class="sx-node" aria-hidden="true"><span class="sx-num">1</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
-                <span class="sx-label">Import</span><span class="sx-sub">Paste or upload</span>
-              </li>
-              <li class="sx-step" data-state="upcoming" style="--i: 1">
-                <span class="sx-node" aria-hidden="true"><span class="sx-num">2</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
-                <span class="sx-label">Preview</span><span class="sx-sub">Build contents</span>
-              </li>
-              <li class="sx-step" data-state="upcoming" style="--i: 2">
-                <span class="sx-node" aria-hidden="true"><span class="sx-num">3</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
-                <span class="sx-label">Convert</span><span class="sx-sub">Build the .build</span>
-              </li>
-              <li class="sx-step" data-state="upcoming" style="--i: 3">
-                <span class="sx-node" aria-hidden="true"><span class="sx-num">4</span><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg></span>
-                <span class="sx-label">Download</span><span class="sx-sub">Save the file</span>
-              </li>
-            </ol>
-          </nav>
-        </div>
-
-        <div class="grid">
-        <!-- INPUT -->
-        <section class="card" aria-labelledby="in-hd">
-          <div class="card-hd" id="in-hd">Input</div>
-          <div class="card-body">
-            <div class="ix-seg" id="seg" style="--n: 2" role="tablist" aria-label="Input mode">
-              <span class="ix-seg-thumb" style="--i: 0"></span>
-              <button type="button" class="on" id="tab-paste" data-mode="paste" role="tab" aria-selected="true" aria-controls="pane-paste">Paste code</button>
-              <button type="button" id="tab-upload" data-mode="upload" role="tab" aria-selected="false" aria-controls="pane-upload">Upload file</button>
-            </div>
-
-            <div id="pane-paste" class="pane" role="tabpanel" aria-labelledby="tab-paste">
-              <label class="lbl" for="code">Path of Building 2 export code or XML</label>
-              <textarea
-                id="code"
-                class="ta"
-                spellcheck="false"
-                placeholder="Paste the PoB2 export code here (or the decoded XML)…"
-              ></textarea>
-            </div>
-
-            <div id="pane-upload" class="pane" role="tabpanel" aria-labelledby="tab-upload" hidden>
-              <input type="file" id="file" accept=".xml,.txt,.build" hidden />
-              <button type="button" class="dz-zone" id="dz" aria-label="Choose or drop a build file">
-                <span class="dz-zone-ic"></span>
-                <span class="dz-zone-txt" id="dz-txt">Drop a .xml / code file, or click to choose</span>
-              </button>
-            </div>
-
-            <label class="lbl" for="name">Build name <span class="muted">(optional)</span></label>
-            <input id="name" class="inp" type="text" placeholder="Defaults to class + level" />
-
-            <div class="row">
-              <button type="button" class="ix-btn ix-btn--primary" id="convert">Convert</button>
-              <button type="button" class="ix-btn ix-btn--ghost" id="clear">Clear</button>
-            </div>
-          </div>
-        </section>
-
-        <!-- OUTPUT -->
-        <section class="card" aria-labelledby="out-hd">
-          <div class="card-hd" id="out-hd">
-            Output
-            <span class="fb-pill" data-state="idle" id="status" role="status">
-              <span class="fb-pill-glyph"></span><span id="status-txt">Idle</span>
+        <header class="hd-bar" role="banner">
+          <a class="hd-brand" href="./" aria-label="PoE 2 - Sweet Vision — home">
+            <span class="hd-mark" aria-hidden="true">◈</span>
+            <span class="hd-brand-text">
+              <span class="hd-name" data-copy-html="brand.name">PoE 2 - <b>Sweet Vision</b></span>
+              <span class="hd-quote" data-copy="brand.quote" aria-hidden="true"
+                >&ldquo;Standing on sweet business. The vision will not be hindered.&rdquo;</span
+              >
             </span>
+          </a>
+          <div class="hd-actions">
+            <button
+              class="icb icb--xs hd-theme-toggle"
+              type="button"
+              id="theme-toggle"
+              aria-label="Switch theme — dark or light"
+              aria-pressed="false"
+              title="Switch theme — dark or light"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" />
+              </svg>
+            </button>
+            <button
+              class="icb icb--xs hd-bg-toggle on"
+              type="button"
+              id="bg-toggle"
+              aria-label="Toggle the animated background"
+              aria-pressed="true"
+              title="Toggle the animated background"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path
+                  d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+                />
+              </svg>
+            </button>
+            <a
+              class="icb icb--xs"
+              href="https://github.com/PraedythXIV/poe2-build-converter"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Source on GitHub"
+              title="Source on GitHub"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.26-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.39.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85l-.01 2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"
+                />
+              </svg>
+            </a>
           </div>
-          <div class="card-body">
-            <div id="stats" class="stats" hidden></div>
-            <div id="warnings" class="warnings" aria-live="polite"></div>
+        </header>
 
-            <div class="json-wrap">
-              <div class="json-bar">
-                <span id="json-name">build.json</span>
-                <span class="muted" id="json-size"></span>
+        <!-- TOP-LEVEL NAV — 6 destinations (Convert flow / Atlas / Genesis / Emotions / Prices / FAQ).
+           The sliding underline (transform/width) is positioned by moveNavUnderline() in main.ts. -->
+        <nav class="tb-wrap nav-top" aria-label="Sections">
+          <div class="tb-bar" role="tablist">
+            <button
+              type="button"
+              class="tb-tab on"
+              id="nav-convert"
+              role="tab"
+              aria-selected="true"
+              aria-controls="route-convert"
+              data-copy="nav.convert"
+            >
+              Convert
+            </button>
+            <button
+              type="button"
+              class="tb-tab"
+              id="nav-atlas"
+              role="tab"
+              aria-selected="false"
+              aria-controls="route-atlas"
+              data-copy="nav.atlas"
+            >
+              Atlas
+            </button>
+            <button
+              type="button"
+              class="tb-tab"
+              id="nav-genesis"
+              role="tab"
+              aria-selected="false"
+              aria-controls="route-genesis"
+              data-copy="nav.genesis"
+            >
+              Genesis
+            </button>
+            <button
+              type="button"
+              class="tb-tab"
+              id="nav-emotions"
+              role="tab"
+              aria-selected="false"
+              aria-controls="route-emotions"
+              data-copy="nav.emotions"
+            >
+              Emotions
+            </button>
+            <button
+              type="button"
+              class="tb-tab"
+              id="nav-prices"
+              role="tab"
+              aria-selected="false"
+              aria-controls="route-prices"
+              data-copy="nav.prices"
+            >
+              Prices
+            </button>
+            <button
+              type="button"
+              class="tb-tab"
+              id="nav-faq"
+              role="tab"
+              aria-selected="false"
+              aria-controls="route-faq"
+              data-copy="nav.faq"
+            >
+              FAQ
+            </button>
+            <span class="tb-underline" aria-hidden="true"></span>
+          </div>
+          <!-- per-tab subtitle below the tab row: only the active tab's line shows, gated by the
+             CSS :has() rules in styles.css on each tab's aria-selected (kept in sync by showRoute). -->
+          <p class="app-tagline" data-route="convert" data-copy-html="tagline.convert">
+            Turn a Path of Building 2 export into a Path of Exile 2 Build Planner <code>.build</code> file you can
+            import in-game.
+          </p>
+          <p class="app-tagline" data-route="atlas" data-copy-html="tagline.atlas">
+            Plan a Path of Exile 2 Atlas passive tree, then share the exact plan with a link.
+          </p>
+          <p class="app-tagline" data-route="genesis" data-copy-html="tagline.genesis">
+            Plan the Genesis tree — its wombs and node choices.
+          </p>
+          <p class="app-tagline" data-route="emotions" data-copy-html="tagline.emotions">
+            Plan emotion combinations for anoints, jewels, and waystones.
+          </p>
+          <p class="app-tagline" data-route="prices" data-copy-html="tagline.prices">
+            Browse live Path of Exile 2 market prices and the currency exchange.
+          </p>
+          <p class="app-tagline" data-route="faq" data-copy-html="tagline.faq">
+            Answers to common questions about importing, the <code>.build</code> format, and where the data comes from.
+          </p>
+        </nav>
+
+        <main aria-labelledby="page-title">
+          <h1 class="sr-only" id="page-title">PoE 2 - Sweet Vision — Path of Building 2 import code to .build file</h1>
+          <!-- ═══ ROUTE: CONVERT — the PoB → .build flow, driven by the 5-step stepper-router ═══ -->
+          <section class="route" id="route-convert" role="tabpanel" aria-labelledby="nav-convert" tabindex="0">
+            <!-- The stepper is a real router (renderStepper()/goToStep() in main.ts). Steps 2-5 unlock
+               once a valid build is parsed; steps are clickable and Back/Next walks the flow. -->
+            <div class="sx" id="stepper" style="--n: 5">
+              <nav aria-label="Conversion progress">
+                <ol class="sx-steps" style="--n: 5">
+                  <li class="sx-step" data-state="current" aria-current="step" style="--i: 0">
+                    <span class="sx-node" aria-hidden="true"
+                      ><span class="sx-num">1</span
+                      ><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                    ></span>
+                    <span class="sx-label" data-copy="steps.0.label">Import</span
+                    ><span class="sx-sub" data-copy="steps.0.sub">Paste or upload</span>
+                  </li>
+                  <li class="sx-step" data-state="upcoming" style="--i: 1">
+                    <span class="sx-node" aria-hidden="true"
+                      ><span class="sx-num">2</span
+                      ><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                    ></span>
+                    <span class="sx-label" data-copy="steps.1.label">Verify breakdown</span
+                    ><span class="sx-sub" data-copy="steps.1.sub">Check the build</span>
+                  </li>
+                  <li class="sx-step" data-state="upcoming" style="--i: 2">
+                    <span class="sx-node" aria-hidden="true"
+                      ><span class="sx-num">3</span
+                      ><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                    ></span>
+                    <span class="sx-label" data-copy="steps.2.label">Passive tree</span
+                    ><span class="sx-sub" data-copy="steps.2.sub">View your tree</span>
+                  </li>
+                  <li class="sx-step" data-state="upcoming" style="--i: 3">
+                    <span class="sx-node" aria-hidden="true"
+                      ><span class="sx-num">4</span
+                      ><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                    ></span>
+                    <span class="sx-label" data-copy="steps.3.label">Variants</span
+                    ><span class="sx-sub" data-copy="steps.3.sub">Per-loadout builds</span>
+                  </li>
+                  <li class="sx-step" data-state="upcoming" style="--i: 4">
+                    <span class="sx-node" aria-hidden="true"
+                      ><span class="sx-num">5</span
+                      ><svg class="sx-check" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7" /></svg
+                    ></span>
+                    <span class="sx-label" data-copy="steps.4.label">Convert</span
+                    ><span class="sx-sub" data-copy="steps.4.sub">Build &amp; download</span>
+                  </li>
+                </ol>
+              </nav>
+            </div>
+
+            <!-- live file-watch banner (Bridge 1a) — uikit #243 .bn. Sits OUTSIDE the step panels (right
+               under the stepper) so the watch state + Stop are visible on EVERY step of the Convert flow
+               while a file is being watched. Hidden unless watching. -->
+            <div id="bc-watch" class="bn bn--success" hidden>
+              <span class="bn-icon" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </span>
+              <div class="bn-body">
+                <span class="bn-title">Watching</span>
+                <b class="bn-file" id="bc-watch-name"></b>
+                <span class="bn-text" id="bc-watch-note"></span>
               </div>
-              <pre class="json-out" id="json"><span class="muted">Converted .build JSON will appear here.</span></pre>
+              <div class="bn-actions">
+                <button type="button" class="ix-btn ix-btn--ghost" id="bc-watch-stop">Stop</button>
+              </div>
             </div>
 
-            <div class="row">
-              <button type="button" class="ix-btn ix-btn--primary" id="download" disabled>Download .build</button>
-              <button type="button" class="ix-btn" id="copy" disabled>Copy JSON</button>
-            </div>
-          </div>
-        </section>
-        </div>
-      </main>
+            <!-- STEP 1 — IMPORT (paste / upload + optional name) -->
+            <div class="step-panel" data-step="0">
+              <section class="card" aria-labelledby="in-hd">
+                <div class="card-hd" id="in-hd" data-copy="shell.cardImport">Import</div>
+                <div class="card-body">
+                  <div class="ix-seg" id="seg" style="--n: 2" role="tablist" aria-label="Input mode">
+                    <span class="ix-seg-thumb" style="--i: 0" aria-hidden="true"></span>
+                    <button
+                      type="button"
+                      class="on"
+                      id="tab-paste"
+                      data-mode="paste"
+                      role="tab"
+                      aria-selected="true"
+                      aria-controls="pane-paste"
+                    >
+                      Paste code
+                    </button>
+                    <button
+                      type="button"
+                      id="tab-upload"
+                      data-mode="upload"
+                      role="tab"
+                      aria-selected="false"
+                      aria-controls="pane-upload"
+                    >
+                      Upload file
+                    </button>
+                    <button
+                      type="button"
+                      id="tab-watch"
+                      data-mode="watch"
+                      role="tab"
+                      aria-selected="false"
+                      aria-controls="pane-watch"
+                      hidden
+                    >
+                      Watch file
+                    </button>
+                  </div>
 
-      <!-- BUILD CONTENTS — live preview of what's in the build (before converting) -->
-      <section class="card bc" id="contents" aria-labelledby="bc-hd" hidden>
-        <div class="card-hd" id="bc-hd">Build contents</div>
-        <div class="card-body">
-          <div class="bc-char" id="bc-char"></div>
-          <p class="bc-legend">
-            <span class="bc-tier" aria-hidden="true" title="Saved to the .build">●</span> part of the build (incl. items' guidance-text stats) ·
-            <span class="bc-tier" aria-hidden="true" title="Preview only — not stored in the .build">○</span> preview only
-          </p>
-          <p class="bc-note">
-            <span class="bc-note-ic" aria-hidden="true">i</span>
-            <span>A PoB import code (e.g. copied from <b>poe.ninja</b>) doesn't always include every item. Anything missing here is also missing in Path of Building — it simply wasn't in the code, so nothing was dropped during conversion. If a piece looks absent, double-check the original build.</span>
-          </p>
-          <div class="bc-gear" id="bc-gear" role="group" aria-label="Equipped gear, laid out like the in-game equipment panel"></div>
-          <div class="bc-grid">
-            <div class="bc-col" id="bc-skills" role="group" aria-label="Skills"></div>
-            <div class="bc-col" id="bc-perks" role="group" aria-label="Perks"></div>
-          </div>
-        </div>
-      </section>
+                  <div id="pane-paste" class="pane" role="tabpanel" aria-labelledby="tab-paste">
+                    <label class="in-label" for="code">Path of Building 2 export code or XML</label>
+                    <div class="in-field in-field--outlined in-field--area">
+                      <textarea
+                        id="code"
+                        class="in-input"
+                        spellcheck="false"
+                        placeholder="Paste the PoB2 export code here (or the decoded XML)…"
+                      ></textarea>
+                    </div>
+                  </div>
+
+                  <div id="pane-upload" class="pane" role="tabpanel" aria-labelledby="tab-upload" hidden>
+                    <input type="file" id="file" accept=".xml,.txt,.build" hidden />
+                    <button type="button" class="dz-zone" id="dz" aria-label="Choose or drop a build file">
+                      <span class="dz-zone-ic"></span>
+                      <span class="dz-zone-txt" id="dz-txt">Drop a .xml / code file, or click to choose</span>
+                    </button>
+                  </div>
+
+                  <!-- Bridge 1(a) live file-watch — the tab is revealed by main.ts only when the
+                     File System Access API is available (Chromium desktop); else this stays hidden. -->
+                  <div id="pane-watch" class="pane" role="tabpanel" aria-labelledby="tab-watch" hidden>
+                    <button
+                      type="button"
+                      class="dz-zone"
+                      id="watch-pick"
+                      aria-label="Choose a PoB2 build file to watch"
+                    >
+                      <span class="dz-zone-ic"></span>
+                      <span class="dz-zone-txt"
+                        >Choose a PoB2 build <code>.xml</code> to watch — it re-imports each time you save in Path of
+                        Building</span
+                      >
+                    </button>
+                  </div>
+
+                  <!-- pobb.in import feedback (Fetching… / Loaded…) — separate from convert warnings -->
+                  <div id="import-note" class="warnings" aria-live="polite"></div>
+
+                  <div class="row">
+                    <button type="button" class="ix-btn ix-btn--ghost" id="clear" data-copy="shell.btnClear">
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <!-- STEP 2 — VERIFY BREAKDOWN (live preview of what's in the build) -->
+            <div class="step-panel" data-step="1" hidden>
+              <section class="card bc" id="contents" aria-labelledby="bc-hd">
+                <div class="card-hd" id="bc-hd">
+                  <span data-copy="shell.cardBuildContents">Build contents</span>
+                  <label class="loadout-pick" id="bc-loadout-wrap" hidden
+                    >Loadout
+                    <select class="loadout-sel" id="bc-loadout" aria-label="Loadout to view"></select>
+                  </label>
+                </div>
+                <div class="card-body">
+                  <div class="bc-char" id="bc-char"></div>
+                  <p class="bc-legend">
+                    <span class="bc-tier" aria-hidden="true" title="Saved to the .build">●</span> part of the build
+                    (incl. items' guidance-text stats) ·
+                    <span class="bc-tier" aria-hidden="true" title="Preview only — not stored in the .build">○</span>
+                    preview only
+                  </p>
+                  <p class="bc-note" id="bc-import-note">
+                    <span class="bc-note-ic" aria-hidden="true">i</span>
+                    <span
+                      >A PoB import code (e.g. copied from <b>poe.ninja</b>) doesn't always include every item. Anything
+                      missing here is also missing in Path of Building — it simply wasn't in the code, so nothing was
+                      dropped during conversion. If a piece looks absent, double-check the original build.</span
+                    >
+                  </p>
+                  <div
+                    class="bc-gear"
+                    id="bc-gear"
+                    role="group"
+                    aria-label="Equipped gear, laid out like the in-game equipment panel"
+                  ></div>
+                  <div class="bc-grid">
+                    <div class="bc-col" id="bc-skills" role="group" aria-label="Skills"></div>
+                    <div class="bc-col" id="bc-perks" role="group" aria-label="Perks"></div>
+                  </div>
+                  <!-- C1 stats (PoB's exported snapshot) + C3 audit — rendered by updateContents() -->
+                  <p class="bc-stats-note" id="bc-stats-note" hidden></p>
+                  <div class="bc-grid">
+                    <div
+                      class="bc-col"
+                      id="bc-stats"
+                      role="group"
+                      aria-label="Stats from the Path of Building export"
+                    ></div>
+                    <div class="bc-col" id="bc-audit" role="group" aria-label="Build audit"></div>
+                  </div>
+                </div>
+              </section>
+              <!-- read-only: PoB build notes + the calc assumptions PoB's exported stats were taken under -->
+              <div id="bc-notes"></div>
+              <div id="bc-config"></div>
+              <div id="bc-inspector"></div>
+            </div>
+
+            <!-- STEP 3 — PASSIVE TREE (read-only viewer of the imported tree; never edits the .build) -->
+            <div class="step-panel" data-step="2" hidden>
+              <section class="card tc" id="tree-card" aria-labelledby="tc-hd">
+                <div class="card-hd" id="tc-hd">
+                  <span data-copy="shell.cardPassiveTree">Passive tree</span>
+                  <label class="loadout-pick" id="tree-loadout-wrap" hidden
+                    >Loadout
+                    <select class="loadout-sel" id="tree-loadout" aria-label="Loadout to view"></select>
+                  </label>
+                </div>
+                <div class="card-body">
+                  <p class="tc-note">
+                    A read-only view of your build's passive tree, exactly as imported — hover any node for its stats,
+                    jewels and tooltips, search to jump to a node, and pan/zoom to explore. The tree is not editable
+                    here: your <code>.build</code> always exports the tree from your PoB code, unchanged.
+                  </p>
+                  <div id="tree-toolbar"></div>
+                  <!-- weapon-set tint legend — shown only when the build allocates set-specific nodes -->
+                  <div class="tc-legend" id="tree-legend" role="group" aria-label="Weapon-set tint key" hidden>
+                    <span class="tc-legend-item"
+                      ><i class="tc-legend-sw tc-legend-sw--ws1" aria-hidden="true"></i>Weapon Set 1</span
+                    >
+                    <span class="tc-legend-item"
+                      ><i class="tc-legend-sw tc-legend-sw--ws2" aria-hidden="true"></i>Weapon Set 2</span
+                    >
+                    <span class="tc-legend-note">tinted nodes are allocated only in that weapon set</span>
+                  </div>
+                  <!-- the tree canvas + the class/ascendancy splash overlay share one relative
+                     stage so the DOM splash (Phase 6) anchors over the world-space canvas -->
+                  <div class="tc-stage">
+                    <div id="tree-mount"></div>
+                    <!-- ascendancy/class splash — a pure-string .itc-card overlay painted by syncTree();
+                       hidden until a known class/ascendancy resolves (graceful text-only fallback) -->
+                    <div id="asc-splash" class="asc-splash" hidden aria-hidden="true"></div>
+                  </div>
+                  <p class="tc-missing" id="tree-missing" hidden></p>
+                </div>
+              </section>
+            </div>
+
+            <!-- STEP 4 — VARIANTS (review/correct the auto-detected loadouts; each becomes one .build) -->
+            <div class="step-panel" data-step="3" hidden>
+              <section class="card" aria-labelledby="vr-hd">
+                <div class="card-hd" id="vr-hd">
+                  <span data-copy="shell.cardVariants">Variants</span>
+                  <button type="button" class="ix-btn ix-btn--ghost" id="var-add">+ Add variant</button>
+                </div>
+                <div class="card-body">
+                  <p class="tc-note">
+                    One PoB can hold several loadouts. The rows below are
+                    <b>auto-detected from your PoB's loadouts</b> — each becomes its own <code>.build</code>. Review
+                    them and fix anything mis-detected: rename, reorder, add, remove, or re-map the tree/skills/gear.
+                    The <b>Convert</b> step downloads them all (one file, or several).
+                  </p>
+                  <div id="var-rows" class="var-rows" role="list"></div>
+                  <p class="var-empty" id="var-empty" hidden>No variants — click <b>+ Add variant</b> to add one.</p>
+                  <div id="var-note" class="var-note" aria-live="polite"></div>
+                </div>
+              </section>
+            </div>
+
+            <!-- STEP 5 — CONVERT (build + download: 1 .build for a single loadout, N for multiple) -->
+            <div class="step-panel" data-step="4" hidden>
+              <section class="card" aria-labelledby="out-hd">
+                <div class="card-hd" id="out-hd">
+                  <span data-copy="shell.cardConvert">Convert</span>
+                  <span class="fb-pill" data-state="idle" id="status" role="status">
+                    <span class="fb-pill-glyph" aria-hidden="true"></span><span id="status-txt">Idle</span>
+                  </span>
+                </div>
+                <div class="card-body">
+                  <!-- optional metadata — leave blank to use the auto-generated defaults (shown as placeholders) -->
+                  <label class="in-label" for="name">Build name <span class="muted">(optional)</span></label>
+                  <div class="in-field in-field--outlined">
+                    <input id="name" class="in-input" type="text" />
+                  </div>
+                  <label class="in-label" for="author">Author <span class="muted">(optional)</span></label>
+                  <div class="in-field in-field--outlined">
+                    <input id="author" class="in-input" type="text" />
+                  </div>
+                  <label class="in-label" for="description">Description <span class="muted">(optional)</span></label>
+                  <div class="in-field in-field--outlined in-field--area">
+                    <textarea id="description" class="in-input" rows="2" spellcheck="false"></textarea>
+                  </div>
+
+                  <div class="row">
+                    <button
+                      type="button"
+                      class="ix-btn ix-btn--primary"
+                      id="convert"
+                      data-copy="shell.btnConvertAction"
+                    >
+                      Convert
+                    </button>
+                    <button
+                      type="button"
+                      class="ix-btn ix-btn--ghost"
+                      id="convert-reset"
+                      data-copy="shell.btnConvertReset"
+                      title="Clear everything and start over"
+                    >
+                      Reset
+                    </button>
+                  </div>
+
+                  <div id="stats" class="stats" hidden></div>
+                  <div id="warnings" class="warnings" aria-live="polite"></div>
+
+                  <div class="json-wrap">
+                    <!-- the loader overlays the whole wrap (absolute inset:0) — kept OUTSIDE the
+                         disclosure so the Converting… feedback shows even while it is collapsed -->
+                    <div id="convert-loader" class="cv-loader" hidden aria-hidden="true">
+                      <span class="ld-conic"></span
+                      ><span class="cv-loader-txt" data-copy="shell.convertLoader">Converting…</span>
+                    </div>
+                    <!-- the emitted JSON is a disclosure, COLLAPSED by default (step 5 anti-scroll-fest);
+                         Download / Copy JSON read the conversion result, never this pane -->
+                    <details class="json-details">
+                      <summary class="json-bar">
+                        <span id="json-name">build.json</span>
+                        <span class="muted" id="json-size"></span>
+                      </summary>
+                      <pre
+                        class="json-out"
+                        id="json"
+                      ><span class="muted">Set any optional fields above, then click Convert.</span></pre>
+                    </details>
+                  </div>
+
+                  <p class="tc-note">
+                    <b>Download</b> saves one <code>.build</code> per variant (just one if your PoB has a single
+                    loadout) to your Downloads folder — drop them in your Build Planner folder. Adjust the set in the
+                    <b>Variants</b> step. The JSON above previews the main loadout.
+                  </p>
+                  <div class="row">
+                    <button type="button" class="ix-btn ix-btn--tonal" id="download" disabled>Download .build</button>
+                    <button type="button" class="ix-btn" id="copy" disabled>Copy JSON</button>
+                  </div>
+                  <div id="dl-note" class="var-note" aria-live="polite"></div>
+                  <!-- Bridge 2a — GGG's official "Via the Website" channel (no API/OAuth publish path exists) -->
+                  <p class="tc-note" id="publish-note" data-copy-html="convert.publishNote">
+                    <b>Publish to PoE2:</b> upload your downloaded <code>.build</code> at
+                    <a href="https://pathofexile2.com/my-account/builds" target="_blank" rel="noopener noreferrer"
+                      >pathofexile2.com/my-account/builds</a
+                    >
+                    — players who subscribe to it get the build auto-loaded in-game.
+                  </p>
+                </div>
+              </section>
+            </div>
+
+            <!-- step navigation — Back / Next walk the unlocked steps -->
+            <div class="step-nav">
+              <button type="button" class="ix-btn ix-btn--ghost" id="step-back" hidden>← Back</button>
+              <button type="button" class="ix-btn ix-btn--primary" id="step-next" disabled>Next</button>
+            </div>
+          </section>
+
+          <!-- ═══ ROUTE: ATLAS — planning-only editor; plans share by link, never via .build ═══ -->
+          <section class="route" id="route-atlas" role="tabpanel" aria-labelledby="nav-atlas" tabindex="0" hidden>
+            <section class="card" id="atlas-card" aria-labelledby="at-hd">
+              <div class="card-hd" id="at-hd" data-copy-html="shell.cardAtlas">
+                Atlas tree <span class="hd-tag">planner</span>
+              </div>
+              <div class="card-body">
+                <p class="tc-note">
+                  Planning only: click nodes to allocate them (auto-pathing from the atlas roots) and share the result
+                  with <b>Copy plan link</b>. The in-game Build Planner format has no atlas fields, so an atlas plan
+                  still can't be exported to a <code>.build</code>.
+                </p>
+                <!-- share-link decode feedback (damaged/unreadable payloads) — filled by atlas/wiring.ts -->
+                <div id="atlas-note" aria-live="polite"></div>
+                <!-- per-tree allocation counters (General + the 5 mechanics) — filled by main.ts -->
+                <div class="at-counts" id="atlas-counts" role="group" aria-label="Passives allocated per tree"></div>
+                <!-- per-master point counters (Doryani / Hilda / Jado) — filled by main.ts -->
+                <div
+                  class="at-counts at-counts--masters"
+                  id="atlas-masters-counts"
+                  role="group"
+                  aria-label="Atlas-master points allocated"
+                ></div>
+                <div class="at-controls">
+                  <button type="button" class="ix-btn ix-btn--primary" id="atlas-fit" data-copy="shell.btnAtlasFit">
+                    Fit view
+                  </button>
+                  <button
+                    type="button"
+                    class="ix-btn ix-btn--ghost"
+                    id="atlas-reset"
+                    data-copy="shell.btnAtlasReset"
+                    disabled
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    class="ix-btn ix-btn--primary"
+                    id="atlas-share"
+                    data-copy="convert.copyPlanLink"
+                    disabled
+                  >
+                    Copy plan link
+                  </button>
+                  <label class="at-toggle" title="Hide the carved background art (e.g. for performance)"
+                    ><input type="checkbox" id="atlas-bg" checked /> Background art</label
+                  >
+                </div>
+                <div class="at-stage" id="atlas-stage">
+                  <button
+                    type="button"
+                    class="am-toggle"
+                    id="atlas-masters-toggle"
+                    aria-expanded="false"
+                    aria-controls="atlas-masters-drawer"
+                  >
+                    <span class="am-toggle-ico" aria-hidden="true"></span>Atlas Masters
+                  </button>
+                  <aside
+                    class="am-drawer"
+                    id="atlas-masters-drawer"
+                    aria-label="Atlas Masters"
+                    aria-hidden="true"
+                    inert
+                  ></aside>
+                  <div id="atlas-mount"></div>
+                  <button
+                    type="button"
+                    class="am-toggle as-toggle"
+                    id="atlas-stats-toggle"
+                    aria-expanded="false"
+                    aria-controls="atlas-stats-panel"
+                  >
+                    <span class="am-toggle-ico" aria-hidden="true"></span>Allocated Stats
+                  </button>
+                  <aside
+                    class="as-panel"
+                    id="atlas-stats-panel"
+                    aria-label="Allocated atlas bonuses"
+                    aria-hidden="true"
+                    inert
+                  ></aside>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <!-- ═══ ROUTE: GENESIS — the 0.5 Breach/Chayula crafting tree ("Brequel"), planner + reference ═══ -->
+          <section class="route" id="route-genesis" role="tabpanel" aria-labelledby="nav-genesis" tabindex="0" hidden>
+            <section class="card" id="genesis-card" aria-labelledby="gn-hd">
+              <div class="card-hd" id="gn-hd" data-copy-html="shell.cardGenesis">
+                Genesis tree <span class="hd-tag">planner</span>
+              </div>
+              <div class="card-body">
+                <p class="tc-note">
+                  Planning only: the Genesis Tree is five independent crafting sub-trees (Currency, Rings, Amulets,
+                  Belts, Breachstones). Click nodes to allocate them (each sub-tree paths from its own womb start) and
+                  share the result with <b>Copy plan link</b>. Like the atlas, a Genesis plan can't be exported to a
+                  <code>.build</code> — the format has no Genesis fields.
+                </p>
+                <!-- share-link decode feedback (damaged/unreadable payloads) — filled by genesis/wiring.ts -->
+                <div id="genesis-note" aria-live="polite"></div>
+                <!-- per-subtree allocation counters — filled by main.ts -->
+                <div
+                  class="at-counts"
+                  id="genesis-counts"
+                  role="group"
+                  aria-label="Passives allocated per sub-tree"
+                ></div>
+                <div class="at-controls">
+                  <button type="button" class="ix-btn ix-btn--primary" id="genesis-fit" data-copy="shell.btnGenesisFit">
+                    Fit view
+                  </button>
+                  <button
+                    type="button"
+                    class="ix-btn ix-btn--ghost"
+                    id="genesis-reset"
+                    data-copy="shell.btnGenesisReset"
+                    disabled
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    class="ix-btn ix-btn--primary"
+                    id="genesis-share"
+                    data-copy="convert.copyPlanLink"
+                    disabled
+                  >
+                    Copy plan link
+                  </button>
+                  <label class="at-toggle" title="Hide the carved background art (e.g. for performance)"
+                    ><input type="checkbox" id="genesis-bg" checked /> Background art</label
+                  >
+                </div>
+                <div class="at-stage" id="genesis-stage">
+                  <div id="genesis-mount"></div>
+                  <button
+                    type="button"
+                    class="am-toggle as-toggle"
+                    id="genesis-stats-toggle"
+                    aria-expanded="false"
+                    aria-controls="genesis-stats-panel"
+                  >
+                    <span class="am-toggle-ico" aria-hidden="true"></span>Allocated Stats
+                  </button>
+                  <aside
+                    class="as-panel"
+                    id="genesis-stats-panel"
+                    aria-label="Allocated Genesis bonuses"
+                    aria-hidden="true"
+                    inert
+                  ></aside>
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <!-- ═══ ROUTE: EMOTIONS — Delirium Distilled-Emotion reference (anoint / jewel / waystone) ═══ -->
+          <section class="route" id="route-emotions" role="tabpanel" aria-labelledby="nav-emotions" tabindex="0" hidden>
+            <section class="card" id="emotions-card" aria-labelledby="em-hd">
+              <div class="card-hd" id="em-hd" data-copy-html="shell.cardEmotions">
+                Distilled Emotions <span class="hd-tag">reference</span>
+              </div>
+              <div class="card-body">
+                <p class="tc-note">
+                  What each Delirium emotion does — the three ways you can spend it: <b>anoint</b> an amulet (three
+                  emotions, in order, grant a passive Notable), <b>craft</b> a Jewel modifier, or <b>instil</b> a
+                  Waystone with Delirium. Reference only — straight from the game data.
+                </p>
+                <div id="emotions-mount"></div>
+              </div>
+            </section>
+          </section>
+
+          <!-- ═══ ROUTE: PRICES — optional, explicit opt-in; conversion never needs the network ═══ -->
+          <section class="route" id="route-prices" role="tabpanel" aria-labelledby="nav-prices" tabindex="0" hidden>
+            <section class="card" id="econ-card" aria-labelledby="ec-hd">
+              <div class="card-hd" id="ec-hd" data-copy="shell.cardPrices">Market prices</div>
+              <div class="card-body" id="econ-mount"></div>
+            </section>
+          </section>
+
+          <!-- ═══ ROUTE: FAQ — static help, no JS needed ═══ -->
+          <section class="route" id="route-faq" role="tabpanel" aria-labelledby="nav-faq" tabindex="0" hidden>
+            <section class="card" id="faq-card" aria-labelledby="faq-hd">
+              <div class="card-hd" id="faq-hd" data-copy="shell.cardFaq">Frequently asked questions</div>
+              <div class="card-body">
+                <!-- FAQ items render here from copy.faq (src/copy.ts) — edit them there, not in this markup. -->
+                <div class="faq-list" data-copy-faq data-behavior="accordion" data-accordion="single"></div>
+              </div>
+            </section>
+          </section>
+        </main>
       </div>
 
       <footer class="ft" aria-labelledby="ft-h">
         <h2 id="ft-h" class="sr-only">About this converter</h2>
         <div class="ft-top">
           <div class="ft-brand">
-            <span class="ft-logo"><span class="ft-mark" aria-hidden="true">◈</span>PoE2 Build Converter</span>
+            <span class="ft-logo"><span class="ft-mark" aria-hidden="true">◈</span>PoE 2 - Sweet Vision</span>
             <p class="ft-blurb">
-              Converts a Path of Building export into a Path of Exile 2 Build Planner file — passives,
-              skills, and gear in one pass — so any build you find loads straight into the game.
+              Convert a PoB into a game-wide build instructor .build for Path of Exile 2 — plus shareable planners for
+              the Atlas and Genesis trees, distilled-emotion crafting recipes, and live market prices.
             </p>
           </div>
           <nav class="ft-col" aria-label="Resources">
-            <h3 class="ft-col-h">Resources</h3>
+            <h3 class="ft-col-h" data-copy="shell.footResources">Resources</h3>
             <ul class="ft-links">
-              <li><a class="ft-link" href="https://www.pathofexile.com/developer/docs/game#buildplanner" target="_blank" rel="noopener noreferrer">Build Planner format</a></li>
-              <li><a class="ft-link" href="https://github.com/PraedythXIV/poe2-build-converter" target="_blank" rel="noopener noreferrer">Source <span class="ft-pip">GitHub</span></a></li>
-              <li><a class="ft-link" href="https://github.com/PraedythXIV/poe2-build-converter/issues" target="_blank" rel="noopener noreferrer">Report an issue</a></li>
+              <li>
+                <a
+                  class="ft-link"
+                  href="https://www.pathofexile.com/developer/docs/index"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >GGG developer docs</a
+                >
+              </li>
+              <li>
+                <a
+                  class="ft-link"
+                  href="https://github.com/PraedythXIV/poe2-build-converter"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >Source <span class="ft-pip">GitHub</span></a
+                >
+              </li>
             </ul>
           </nav>
           <nav class="ft-col" aria-label="Tools">
-            <h3 class="ft-col-h">Tools</h3>
+            <h3 class="ft-col-h" data-copy="shell.footTools">Tools</h3>
             <ul class="ft-links">
-              <li><a class="ft-link" href="https://pathofbuilding.community/" target="_blank" rel="noopener noreferrer">Path of Building</a></li>
-              <li><a class="ft-link" href="https://poe.ninja/" target="_blank" rel="noopener noreferrer">poe.ninja</a></li>
-              <li><a class="ft-link" href="https://mobalytics.gg/poe-2" target="_blank" rel="noopener noreferrer">Mobalytics</a></li>
+              <li>
+                <a class="ft-link" href="https://pathofbuilding.community/" target="_blank" rel="noopener noreferrer"
+                  >Path of Building</a
+                >
+              </li>
+              <li>
+                <a class="ft-link" href="https://poe.ninja/" target="_blank" rel="noopener noreferrer">poe.ninja</a>
+              </li>
+              <li>
+                <a class="ft-link" href="https://mobalytics.gg/poe-2" target="_blank" rel="noopener noreferrer"
+                  >Mobalytics</a
+                >
+              </li>
+            </ul>
+          </nav>
+          <nav class="ft-col" aria-label="Lore &amp; Wiki">
+            <h3 class="ft-col-h" data-copy="shell.footLore">Lore &amp; Wiki</h3>
+            <ul class="ft-links">
+              <li>
+                <a
+                  class="ft-link"
+                  href="https://www.poe2wiki.net/wiki/Path_of_Exile_2_Wiki"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >PoE2 Wiki</a
+                >
+              </li>
+              <li>
+                <a
+                  class="ft-link"
+                  href="https://www.reddit.com/r/pathofexile/comments/1poxzo5/lore_compilation_update_for_poe_327_poe_ii_04/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Lore compilation by justathetan (Reddit)"
+                  >Lore compilation <span class="ft-pip">Reddit</span></a
+                >
+              </li>
+              <li>
+                <a
+                  class="ft-link"
+                  href="https://www.reddit.com/r/Wraeclast/comments/1u4fzij/comment/ou46ma3/?context=3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="POE II 0.5 notes by justathetan (Reddit)"
+                  >POE II 0.5 notes <span class="ft-pip">Reddit</span></a
+                >
+              </li>
             </ul>
           </nav>
           <div class="ft-col">
-            <h3 class="ft-col-h">Where the .build goes</h3>
+            <h3 class="ft-col-h" data-copy="shell.footWhereBuildGoes">Where the .build goes</h3>
             <details class="ft-details">
               <summary>Build Planner folder</summary>
               <ul>
                 <li><b>Windows:</b> <code>Documents\My Games\Path of Exile 2\BuildPlanner</code></li>
-                <li><b>Steam Deck:</b> <code>…/steamapps/compatdata/2315204395/pfx/…/Documents/My Games/Path of Exile 2/BuildPlanner</code></li>
+                <li>
+                  <b>Steam Deck:</b>
+                  <code>…/steamapps/compatdata/2315204395/pfx/…/Documents/My Games/Path of Exile 2/BuildPlanner</code>
+                </li>
               </ul>
             </details>
           </div>
         </div>
         <div class="ft-bar">
           <span class="ft-copy" id="provenance"></span>
-          <span class="ft-disclaimer">Not affiliated with or endorsed by Grinding Gear Games.</span>
+          <span class="ft-disclaimer" data-copy="shell.footDisclaimer"
+            >Not affiliated with or endorsed by Grinding Gear Games.</span
+          >
         </div>
       </footer>
     </div>

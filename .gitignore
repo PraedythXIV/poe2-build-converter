@@ -1,22 +1,48 @@
-# dependencies
+# dependencies & build output (regenerated at the repo root)
 node_modules/
-
-# build output — the single-file app is published on the GitHub Releases page, not committed
 dist/
-release/
 
-# GGG's official developer docs + local working/design notes — kept local, never published
-Docs/
+# stale compiled output in src/ — src is TypeScript-only. A stray `tsc` WITHOUT --noEmit emits .js/.js.map
+# next to the .ts sources, and Vite/Vitest resolve `./x` → x.js BEFORE x.ts, so the .js silently SHADOWS
+# every source edit to an imported module (the build/tests use the stale .js). Ignore them all EXCEPT the
+# legitimately-vendored uikit JS (src/vendor/uikit/behaviors.js).
+src/**/*.js
+src/**/*.js.map
+!src/vendor/uikit/*.js
+!src/vendor/uikit/*.js.map
+# same guard for tests/ — tests are TypeScript-only too (tests/helpers/*.js would shadow the .ts helpers)
+tests/**/*.js
+tests/**/*.js.map
 
-# reference build exports (poe.ninja / Mobalytics) and generated examples — not committed.
-# The one PoB2 fixture the tests need lives in tests/fixtures/.
-build refs/
+# staged Cloudflare Pages deploy (scripts/deploy-bff.mjs)
+server/.pages/
+
+# local scratch output (the old emit-sample target) — never committed
 examples/
 
-*.local
-.DS_Store
-
-# never commit secrets (none exist today — preventive)
+# secrets — never commit (keep the template)
 .env
 .env.*
 !.env.example
+
+# local-only working state, never committed:
+#   CLAUDE.md   = project working context (loaded from disk)
+#   PROGRESS.md = session-continuity handoff (live copy is _workbench/PROGRESS.md)
+#   .claude/    = per-machine agent state (tdd-guard test.json written by the vitest reporter)
+CLAUDE.md
+PROGRESS.md
+.claude/
+
+# OS / editor noise
+.DS_Store
+*.local
+
+# non-app working area — design notes (Docs/), dev scratch (dev/, examples, build refs/, release/),
+# and the relocated data-pipeline sources. Everything not part of the shipped app lives here.
+_workbench/
+
+# defense-in-depth: the multi-GB pipeline sources now live under _workbench/, but ignore them at the
+# repo root too so a stray re-extract can never be committed.
+data-extract/
+tmp-spikes/
+pob2/

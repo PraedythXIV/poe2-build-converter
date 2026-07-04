@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { deflate } from 'pako'
-import { convert } from '../src/convert/index'
+import { convert, convertVariant } from '../src/convert/index'
 import { decodePobCode } from '../src/convert/decode'
-import type { BuildSkill } from '../src/convert/types'
+import { parsePob } from '../src/convert/parsePob'
+import type { BuildSkill, PobBuild } from '../src/convert/types'
+import { emptyItemSet } from './helpers/pobBuild'
 
 // vitest runs with cwd = project root
 const SAMPLE_XML = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'pob2-build.xml'), 'utf8')
@@ -29,6 +31,15 @@ describe('convert (sample Monk / Martial Artist build)', () => {
   it('maps ascendancy verbatim', () => {
     expect(result.build.ascendancy).toBe('Monk1')
     expect(result.stats.treeVersion).toBe('0_5')
+  })
+
+  it('reads the spec <AttributeOverride> into exact per-node attribute choices', () => {
+    // fixture <AttributeOverride strNodes="…18 ids…" dexNodes="…7 ids…" intNodes="48773"/>
+    const spec = parsePob(SAMPLE_XML).spec
+    expect(spec.attributeChoices.get('48773')).toBe('Intelligence') // the lone int node
+    expect(spec.attributeChoices.get('11672')).toBe('Dexterity')
+    expect(spec.attributeChoices.get('39037')).toBe('Strength')
+    expect(spec.attributeChoices.size).toBe(18 + 7 + 1) // every chosen node, no overlap
   })
 
   it('maps every passive node with zero skipped', () => {
@@ -87,7 +98,10 @@ describe('convert (sample Monk / Martial Artist build)', () => {
   it('maps the whole belt row to one Flask1 inventory: x0/x1 flasks, x2/x3/x4 charms (verified in-game)', () => {
     const slots = result.build.inventory_slots ?? []
     // belt row = one Flask1 inventory: x0 life, x1 mana, x2/x3/x4 the three charms.
-    const flask1X = slots.filter((s) => s.inventory_id === 'Flask1').map((s) => s.slot_x).sort((a, b) => (a ?? 0) - (b ?? 0))
+    const flask1X = slots
+      .filter((s) => s.inventory_id === 'Flask1')
+      .map((s) => s.slot_x)
+      .sort((a, b) => (a ?? 0) - (b ?? 0))
     expect(flask1X).toEqual([0, 1, 2, 3, 4])
     // `Charm1` is NOT a real Build Planner inventory id — the game ignores it, so we never emit it.
     expect(slots.some((s) => s.inventory_id === 'Charm1')).toBe(false)
@@ -99,6 +113,70 @@ describe('convert (sample Monk / Martial Artist build)', () => {
   it('emits no error-level diagnostics', () => {
     const errors = result.warnings.filter((w) => w.level === 'error')
     expect(errors).toEqual([])
+  })
+
+  // .build v1 gained an optional root `link` (?string) between author and description
+  // (live GGG File Formats docs, verified 2026-07-04) — the natural value is the build's source URL.
+  it('emits opts.link as the Build root link field', () => {
+    expect(convert(SAMPLE_XML, { link: 'https://pobb.in/AbCd123_' }).build.link).toBe('https://pobb.in/AbCd123_')
+  })
+})
+
+describe('multi-build: parse carries all axes + convertVariant', () => {
+  const active = convert(SAMPLE_XML) // the active build, for parity comparisons
+
+  it('parses every loadout axis with active pointers (single-set fixture)', () => {
+    const pob = parsePob(SAMPLE_XML)
+    expect(pob.specs).toHaveLength(1)
+    expect(pob.activeSpecIndex).toBe(0)
+    expect(pob.specs[0]).toBe(pob.spec) // the active spec is the one in the list
+    expect(pob.skillSets.map((s) => s.id)).toEqual(['1'])
+    expect(pob.activeSkillSetId).toBe('1')
+    expect(pob.skillSets[0]!.groups).toBe(pob.skillGroups) // active groups
+    expect(pob.itemSets.map((s) => s.id)).toEqual(['1'])
+    expect(pob.itemSets[0]!.title).toBe('Default') // <ItemSet title="Default">
+    expect(pob.activeItemSetId).toBe('1')
+  })
+
+  it('convertVariant on the active tuple matches a plain convert (just the name differs)', () => {
+    const pob = parsePob(SAMPLE_XML)
+    const v = convertVariant(pob, { specIndex: 0, skillSetId: '1', itemSetId: '1', name: 'Active copy' })
+    expect(v.build.passives).toEqual(active.build.passives)
+    expect(v.build.skills).toEqual(active.build.skills)
+    expect(v.build.inventory_slots).toEqual(active.build.inventory_slots)
+    expect(v.build.name).toBe('Active copy')
+  })
+
+  it('convertVariant selects the chosen (spec, skill set, item set) tuple', () => {
+    const base = parsePob(SAMPLE_XML)
+    // synthesize a 2nd entry per axis so selection is observable
+    const multi: PobBuild = {
+      ...base,
+      specs: [base.spec, { ...base.spec, title: 'Levelling', nodes: ['11495'] }], // 1 node vs ~129
+      skillSets: [...base.skillSets, { id: '2', title: 'One', groups: base.skillGroups.slice(0, 1) }],
+      itemSets: [...base.itemSets, emptyItemSet('2', 'Bare')],
+    }
+    const full = convertVariant(multi, { specIndex: 0, skillSetId: '1', itemSetId: '1', name: 'full' })
+    const lite = convertVariant(multi, { specIndex: 1, skillSetId: '2', itemSetId: '2', name: 'lite' })
+
+    expect(lite.stats.passiveCount).toBeLessThan(full.stats.passiveCount) // alt spec is tiny
+    expect(lite.stats.skillCount).toBeLessThanOrEqual(full.stats.skillCount) // alt set ≤ groups
+    expect(lite.stats.itemCount).toBe(0) // empty item set
+    expect(lite.build.name).toBe('lite')
+    // the full variant still equals the active build's tree
+    expect(full.build.passives).toEqual(active.build.passives)
+  })
+
+  it('convertVariant carries sel.link into every variant .build (same source URL for all files)', () => {
+    const pob = parsePob(SAMPLE_XML)
+    const v = convertVariant(pob, {
+      specIndex: 0,
+      skillSetId: '1',
+      itemSetId: '1',
+      name: 'Linked',
+      link: 'https://pobb.in/AbCd123_',
+    })
+    expect(v.build.link).toBe('https://pobb.in/AbCd123_')
   })
 })
 

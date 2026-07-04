@@ -1,0 +1,648 @@
+/* Distilled-Emotion planner styles (.em-*). Token-driven (contract in src/styles.css) so it themes
+   with the rest of the app. Each emotion element gets an inline --em-rgb (app-internal, set from data
+   in emotions/index.ts) = its icon's dominant hue. */
+
+.em-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── sub-tab nav ─────────────────────────────────────────────────────────────────────────── */
+.em-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+  padding: var(--space-1);
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-3, 12px);
+}
+.em-subtab {
+  flex: 1 1 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-2);
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+}
+.em-subtab:hover {
+  color: var(--text-primary);
+  background: var(--surface-2);
+}
+.em-subtab.on {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color));
+}
+.em-subtab-t {
+  font: 700 0.92rem var(--font-sans);
+}
+.em-subtab-s {
+  font-size: 0.72rem;
+  color: var(
+    --text-secondary
+  ); /* not --text-muted: at 11.5px on the active subtab's warm tint that fails 4.5:1 (WCAG AA) */
+}
+
+/* ── shared text ─────────────────────────────────────────────────────────────────────────── */
+.em-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3-5);
+}
+.em-lead {
+  margin: 0;
+  max-width: 72ch;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.em-note {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+/* Sinister Jewel Sockets reference — where the emotion-instilled jewels actually go */
+.em-sinister {
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-3-5);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid rgba(var(--accent-rgb), 0.6);
+  border-radius: var(--radius-2);
+}
+.em-sinister-h {
+  margin-bottom: 5px;
+  font: 700 0.7rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.em-sinister-b {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.em-sinister-b b {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+.em-muted {
+  color: var(--text-muted);
+}
+.em-prov {
+  margin: var(--space-1) 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+/* ── emotion icon ────────────────────────────────────────────────────────────────────────── */
+.em-ico {
+  display: inline-block;
+  vertical-align: middle;
+  object-fit: contain;
+  cursor: help;
+  flex: none;
+}
+.em-ico-dot {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgb(var(--em-rgb)), color-mix(in srgb, rgb(var(--em-rgb)) 50%, #000));
+}
+
+/* ── stat lines (shared) ─────────────────────────────────────────────────────────────────── */
+.em-stats {
+  list-style: none;
+  margin: var(--space-1-5) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.em-stats li {
+  position: relative;
+  padding-left: var(--space-3);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.em-stats li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 70%, transparent);
+}
+
+/* ── AMULET: bulk tools ──────────────────────────────────────────────────────────────────── */
+.em-inv-tools {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1-5);
+}
+.em-inv-tools-lbl {
+  font: 600 0.78rem var(--font-sans);
+  color: var(--text-muted);
+  margin-right: var(--space-0-5);
+}
+/* bulk ± / Reset are vendored .ix-btn atoms, compacted to the toolbar row (the pg- idiom) */
+.em-bulk.ix-btn,
+.em-reset.ix-btn {
+  min-height: 26px;
+  padding: 0 var(--space-3);
+  font: 700 0.78rem var(--font-mono);
+  color: var(--text-secondary);
+}
+.em-bulk-sub {
+  color: var(--text-muted);
+}
+.em-bulk-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: var(--space-0-5) 3px;
+  background: var(--border-color);
+}
+.em-reset {
+  margin-left: auto;
+}
+.em-reset:hover {
+  color: var(--status-danger-text, #ffb4ab);
+  border-color: color-mix(in srgb, var(--status-danger, #ff5449) 55%, var(--border-color));
+}
+
+/* ── AMULET: inventory — one block per rarity; cards fill 2 rows then wrap (≤ 2 rows tall) ── */
+.em-inv-cols {
+  /* auto-fit grid: blocks fill the row on wide screens (empty tracks collapse → no trailing gap)
+     and wrap to track-width on narrow ones (a lone wrapped block stays sized, never balloons). */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
+  gap: var(--space-2-5) var(--space-4);
+  align-items: start;
+}
+.em-inv-col {
+  min-width: 0; /* let the grid item shrink to its track instead of overflowing */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.em-inv-col-h {
+  margin: 0;
+  padding-bottom: var(--space-1);
+  font: 700 0.72rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+}
+.em-inv-col-cards {
+  display: grid;
+  grid-template-rows: repeat(2, auto); /* exactly two rows; columns auto-wrap → ≤ 2 cards tall */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr); /* cards stretch to fill the block (no trailing gap) */
+  gap: var(--space-2);
+}
+.em-inv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: 9px var(--space-2-5);
+  background: linear-gradient(160deg, rgba(var(--em-rgb), 0.14), var(--surface-1) 70%);
+  border: 1px solid color-mix(in srgb, rgb(var(--em-rgb)) 35%, var(--border-color));
+  border-radius: var(--radius-2);
+}
+.em-inv-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.em-inv-top .em-ico {
+  filter: drop-shadow(0 1px 3px rgba(var(--shadow-rgb), 0.5));
+}
+.em-inv-name {
+  font: 700 0.86rem var(--font-sans);
+  color: var(--text-primary);
+}
+.em-step {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  gap: var(--space-1);
+}
+.em-step-quick {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-1);
+}
+/* ± buttons are vendored .icb atoms, compacted to the dense grids; the emotion hue rides hover.
+   Shared by the amulet steppers AND the waystone combiner (its rules live here, not re-declared). */
+.em-step-btn.icb,
+.em-way-step.icb {
+  width: auto;
+  height: 26px;
+  border-radius: var(--radius-2);
+  font: 700 0.82rem var(--font-mono);
+}
+.em-step-quick .em-step-btn.icb {
+  font-size: 0.7rem;
+  letter-spacing: -0.04em;
+  color: var(--text-muted);
+}
+.em-step-btn:hover,
+.em-way-step:hover:not(:disabled) {
+  color: var(--text-primary);
+  background: color-mix(in srgb, rgb(var(--em-rgb)) 22%, var(--surface-2));
+  border-color: color-mix(in srgb, rgb(var(--em-rgb)) 45%, var(--border-color));
+}
+/* the owned-count field is the vendored .in-input/.ns-input (centered mono, spinners hidden) */
+.em-step-n {
+  min-width: 0;
+  padding: 5px var(--space-1);
+  font-size: 0.92rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.em-step-n:focus-visible {
+  outline: 2px solid color-mix(in srgb, rgb(var(--em-rgb)) 60%, var(--accent));
+  outline-offset: 0;
+}
+
+/* ── AMULET: craftable list ──────────────────────────────────────────────────────────────── */
+.em-craft-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2-5);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border-color);
+}
+.em-craft-summary {
+  font: 600 0.84rem var(--font-sans);
+  color: var(--text-primary);
+}
+.em-alltoggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1-5);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.em-alltoggle input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+/* the filter field is the vendored .in-input; only the flex sizing + row placement are app-side */
+.em-search {
+  flex: 1 1 160px;
+  min-width: 120px;
+  margin-left: auto;
+  padding: var(--space-2) 11px;
+  font-size: 0.84rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.em-search:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 60%, transparent);
+  outline-offset: 1px;
+}
+.em-craft-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: var(--space-2);
+  max-height: 620px;
+  overflow-y: auto;
+}
+.em-craft {
+  display: flex;
+  gap: var(--space-2-5);
+  padding: 9px 11px;
+  background: var(--surface-1);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.em-craft[hidden] {
+  display: none;
+}
+.em-craft-times {
+  flex: none;
+  align-self: flex-start;
+  padding: var(--space-0-5) var(--space-2);
+  font: 700 0.82rem var(--font-mono);
+  color: var(--accent-contrast, #1a1410);
+  background: var(--accent);
+  border-radius: var(--radius-pill);
+}
+.em-craft-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.em-craft-hd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+.em-craft-name {
+  font: 700 0.88rem var(--font-sans);
+  color: var(--text-primary);
+}
+/* hidden / anoint-only Notable badge — an exclusive that isn't on the passive tree */
+.em-hidden-badge {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 1px 7px;
+  font: 700 0.58rem var(--font-mono);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.13);
+  border: 1px solid rgba(var(--accent-rgb), 0.4);
+  border-radius: var(--radius-pill);
+  cursor: help;
+}
+.em-recipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.em-recipe-ico {
+  filter: drop-shadow(0 1px 2px rgba(var(--shadow-rgb), 0.5));
+}
+.em-arrow {
+  color: var(--text-muted);
+  font-weight: 700;
+  margin: 0 3px;
+}
+.em-empty {
+  margin: 0;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* ── JEWEL: segmented toggle + table ─────────────────────────────────────────────────────── */
+/* the Normal/Time-Lost toggle is the vendored .ix-seg (shell + sliding thumb + button states),
+   the same composition the economy Browse/Exchange views use; only the width is app-side */
+.em-seg {
+  width: fit-content;
+}
+/* keyboard focus: the app-wide gold ring on the still-hand-rolled subtab tiles (the vendored
+   atoms — icb/ix-btn/ix-seg — carry their own rings) */
+.em-subtab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.em-jtable-wrap {
+  overflow-x: auto;
+}
+/* the matrix rides the vendored .dt-table base (sticky head, cell chrome); the emotion-hue row
+   headers + full cell borders + wrapping cells are the matrix's own identity */
+.em-jtable {
+  font-size: 0.78rem;
+  border-collapse: collapse;
+}
+.em-jtable th,
+.em-jtable td {
+  vertical-align: top;
+  padding: 7px 9px;
+  border: 1px solid var(--border-color);
+  white-space: normal;
+}
+.em-jtable thead th {
+  font: 700 0.74rem var(--font-mono);
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+  background: var(--surface-1);
+}
+.em-jrow-hd {
+  white-space: nowrap;
+  background: var(--surface-1);
+  border-left: 3px solid rgb(var(--em-rgb));
+}
+.em-jrow-hd .em-ico {
+  margin-right: var(--space-1-5);
+}
+.em-jrow-name {
+  font: 700 0.82rem var(--font-sans);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+.em-jrow-rar {
+  display: block;
+  margin-top: var(--space-0-5);
+  font: 500 0.66rem var(--font-mono);
+  color: var(--text-muted);
+}
+.em-jcell {
+  color: var(--text-secondary);
+}
+.em-empty-cell {
+  background: color-mix(in srgb, var(--surface-1) 40%, transparent);
+}
+.em-jslot {
+  line-height: 1.4;
+}
+.em-jslot + .em-jslot {
+  margin-top: var(--space-1);
+}
+.em-affix {
+  display: inline-block;
+  min-width: 1.1em;
+  margin-right: 5px;
+  padding: 0 var(--space-1);
+  font: 700 0.66rem var(--font-mono);
+  text-align: center;
+  border-radius: 3px;
+}
+/* Mixed toward the theme text (the .em-way-pct idiom): these chips sit on the CARD face, not inside
+   a dark .itc-card island, so the raw dark-tuned craft hues would wash out in the light theme. */
+.em-affix-pre {
+  color: color-mix(in srgb, var(--poe-craft-affix-pre-fg) 60%, var(--text-primary));
+  background: rgba(var(--poe-craft-affix-pre-rgb), 0.16);
+}
+.em-affix-suf {
+  color: color-mix(in srgb, var(--poe-craft-affix-suf-fg) 60%, var(--text-primary));
+  background: rgba(var(--poe-craft-affix-suf-rgb), 0.16);
+}
+.em-jslot b {
+  color: var(--text-primary);
+}
+
+/* ── WAYSTONE: list + combiner ───────────────────────────────────────────────────────────── */
+.em-way-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+.em-way {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 0.8fr) minmax(78px, auto) 2fr;
+  align-items: center;
+  gap: var(--space-2-5);
+  padding: 7px var(--space-3);
+  background: linear-gradient(90deg, rgba(var(--em-rgb), 0.1), var(--surface-1) 60%);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid rgb(var(--em-rgb));
+  border-radius: var(--radius-2);
+}
+.em-way-qty {
+  display: grid;
+  grid-template-columns: 26px 42px 26px;
+  gap: 3px;
+  align-items: center;
+}
+/* ± buttons: vendored .icb atoms — compaction + hover SHARED with the amulet steppers (see the
+   .em-step-btn.icb group in the AMULET section) */
+/* the applied-count field is the vendored .in-input/.ns-input */
+.em-way-n {
+  min-width: 0;
+  padding: 5px var(--space-0-5);
+  font-size: 0.9rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.em-way-n:focus-visible {
+  outline: 2px solid color-mix(in srgb, rgb(var(--em-rgb)) 60%, var(--accent));
+  outline-offset: 0;
+}
+.em-way-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 700 0.85rem var(--font-sans);
+  color: var(--text-primary);
+}
+.em-way-pct {
+  font: 700 0.82rem var(--font-mono);
+  color: color-mix(in srgb, rgb(var(--em-rgb)) 65%, var(--text-primary));
+  white-space: nowrap;
+}
+.em-way-bonus {
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--text-secondary);
+}
+.em-way-sum {
+  padding: 11px var(--space-3-5);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  background: var(--surface-2);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-2);
+}
+.em-way-sum-lbl {
+  color: var(--text-muted);
+  margin-right: var(--space-1);
+}
+.em-way-total {
+  color: var(--accent);
+  font-family: var(--font-mono);
+}
+
+/* ── hover tooltip ───────────────────────────────────────────────────────────────────────────
+   The card itself reuses the app's #311 item card (.itc-card, in styles.css) so there is ONE
+   tooltip vocabulary — see emotionTooltip() in ./index. Only two things stay here: the
+   fixed-position wrapper that floats the card under the cursor, and the emotion-specific stat
+   layout (the gem-quality colour lines + the waystone text line). */
+.em-tip {
+  position: fixed;
+  z-index: 60;
+  /* fixed width so the itc-card inside (width: min(330px, 100%)) has a definite containing block —
+     a fixed wrapper with only max-width shrink-wraps to ~0 and collapses the card */
+  width: 330px;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 24px rgba(var(--shadow-rgb), 0.55));
+}
+.em-tip[hidden] {
+  display: none;
+}
+/* emotion-specific stat rows inside the itc-card body: a bullet-free list of gem-quality lines */
+.em-tip .em-tip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0-5);
+}
+.em-tip .em-tip-list li {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+.em-tip-col {
+  font-weight: 700;
+}
+.em-tip-col-ruby {
+  color: var(--poe-craft-gem-ruby);
+}
+.em-tip-col-sapphire {
+  color: var(--poe-craft-gem-sapphire);
+}
+.em-tip-col-emerald {
+  color: var(--poe-craft-gem-emerald);
+}
+.em-tip-col-diamond {
+  color: var(--poe-craft-gem-diamond);
+}
+.em-tip-way {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-secondary);
+}
+/* the instructional foot — a full sentence, so it stays a plain readable muted line (the itc-card
+   .itc-stamp it would otherwise reuse forces uppercase-centered, which mangles the prose) */
+.em-tip-foot {
+  margin: 0;
+  font-size: 0.74rem;
+  font-style: italic;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+@media (max-width: 560px) {
+  .em-way {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      'qty name pct'
+      'bonus bonus bonus';
+  }
+  .em-way-qty {
+    grid-area: qty;
+  }
+  .em-way-name {
+    grid-area: name;
+  }
+  .em-way-pct {
+    grid-area: pct;
+  }
+  .em-way-bonus {
+    grid-area: bonus;
+  }
+}

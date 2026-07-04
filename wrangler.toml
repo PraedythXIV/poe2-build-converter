@@ -1,0 +1,18 @@
+# Cloudflare Pages project for the BFF: a strict-allowlist proxy + in-memory cache
+# (server/worker.mjs) fronting poe2scout (api.poe2scout.com) and pobb.in, which return no CORS
+# header. "Advanced mode" — worker.mjs is staged verbatim as _worker.js, no build step.
+# Pages, not a classic Worker, so the URL stays <project>.pages.dev with no identity-bearing
+# workers.dev subdomain.
+#
+#   URL     https://poe2-planner-bff.pages.dev   (prod default; override via VITE_BFF_BASE or the in-app field)
+#   Deploy  npm run deploy:bff  — stages server/.pages/_worker.js then `wrangler pages deploy`,
+#           passing --project-name + the output dir as flags (the keys below are the bare-CLI fallback)
+#   Auth    CLOUDFLARE_API_TOKEN in .env (see .env.example), or `wrangler login`
+#
+# wrangler is deliberately not a devDependency (run via `npx wrangler@latest`) so the license
+# guard scans only installed deps. No runtime bindings today (cache is an in-memory Map); a KV
+# namespace for the cache would be declared here.
+
+name = "poe2-planner-bff"
+pages_build_output_dir = "server/.pages"
+compatibility_date = "2026-06-01"

@@ -1,0 +1,9 @@
+{
+  "$comment": "Dedupe gate (npm run check:dedupe): ZERO clones policy (owner, 2026-07-02) — any new duplication at the 50-token floor fails CI. Reuse/extend the existing component or helper instead of pasting a variant; the shared homes are src/vendor/uikit (UI), src/ui + src/copy.ts (app), scripts/lib*.mjs (pipeline), tests/helpers (tests). jscpd:ignore-start/end marks the intrinsic twins in-code (bc7 per-mode self-tests, the -webkit-mask/mask vendor-prefix pair, packer/emotions/jewel-radii ESM import headers, interact.ts BFS skeletons). The 50-token floor is CALIBRATED, not lax: the full sweep (audited 2026-07-02, structural finds fixed) leaves only language-forced idiom, all marked in-code. Do NOT raise the threshold/floor or widen the ignores without the owner's sign-off — refactor to reuse instead.",
+  "threshold": 0,
+  "minTokens": 50,
+  "reporters": ["consoleFull"],
+  "ignore": ["**/src/vendor/**", "**/src/data/**", "**/src/assets/**", "**/tests/fixtures/**"],
+  "ignorePattern": ["^\\s*import\\s.+from\\s.+$", "^\\s*} from '.+'$"],
+  "gitignore": true
+}

@@ -1,0 +1,483 @@
+{
+  "_provenance": {
+    "source": "pathofexile-dat (SnosMe, MIT) — AtlasClassPassives + AtlasClassPassiveClasses + Stats",
+    "note": "display row + point budget read from schema-unmapped columns; verified against the in-game UI (4 rows x 3 layout; pick ANY keystones up to a 4-point cap, no per-row limit).",
+    "builtAt": "2026-07-04T10:42:14.105Z"
+  },
+  "budget": 4,
+  "masters": [
+    {
+      "id": "Doryani",
+      "name": "Doryani's Science",
+      "budget": 4,
+      "portrait": "Art/Textures/Interface/2D/2DArt/UIImages/InGame/AtlasScreen/KeystonesUI/Master1Normal.dds",
+      "keystones": [
+        {
+          "id": "DoryaniKeystone1",
+          "row": 1,
+          "col": 1,
+          "name": "Stitch the Flesh",
+          "flavour": "Did you think I would let a simple thing\nlike dying interfere with our work?",
+          "stats": [
+            "Your Maps have an additional Revival, up to 6"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone1.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive1.dds"
+        },
+        {
+          "id": "DoryaniKeystone2",
+          "row": 1,
+          "col": 2,
+          "name": "Refined Formula",
+          "flavour": "Let's make this a little more... efficient.",
+          "stats": [
+            "Expeditions have only 1 Explosive",
+            "150% increased Expedition Explosive Radius",
+            "100% increased Expedition Explosive Placement Range",
+            "Grand Expeditions have only 5 Explosives"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone2.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive2.dds"
+        },
+        {
+          "id": "DoryaniKeystone3",
+          "row": 1,
+          "col": 3,
+          "name": "Evolutionary Pressure",
+          "flavour": "The leylines can affect more than just\nthe terrain... curious...",
+          "stats": [
+            "1% increased Rarity of Items Dropped by Monsters per Explicit Modifier on the Map",
+            "2% increased Effectiveness of Monsters per Explicit Modifier on the Map",
+            "Rare Monsters have a 3% increased chance of Monster Modifiers per Explicit Modifier on the Map"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone3.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive3.dds"
+        },
+        {
+          "id": "DoryaniKeystone4",
+          "row": 2,
+          "col": 1,
+          "name": "Improved Calibration",
+          "flavour": "The more we work with these leylines,\nthe more I feel I... understand them...",
+          "stats": [
+            "Waystones have 25% more effect of Prefix Modifiers or 25% more effect of Suffix Modifiers when opening Maps"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone4.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive4.dds"
+        },
+        {
+          "id": "DoryaniKeystone5",
+          "row": 2,
+          "col": 2,
+          "name": "Disengaged Safeties",
+          "flavour": "Our long-term survival no longer matters.\nWe are already dead men walking.",
+          "stats": [
+            "Map Areas are Irradiated"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone5.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive5.dds"
+        },
+        {
+          "id": "DoryaniKeystone6",
+          "row": 2,
+          "col": 3,
+          "name": "Careful Procurement",
+          "flavour": "We will need quite a few resources if\nwe are to succeed. I will teach you.",
+          "stats": [
+            "Magic Monster Packs have 35% chance to have an additional Modifier"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone6.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive6.dds"
+        },
+        {
+          "id": "DoryaniKeystone7",
+          "row": 3,
+          "col": 1,
+          "name": "Volatile Connection",
+          "flavour": "I need more data on a new process.\nPlease, do what you do best.",
+          "stats": [
+            "15% chance areas are Cleansed or Corrupted"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone7.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive7.dds"
+        },
+        {
+          "id": "DoryaniKeystone8",
+          "row": 3,
+          "col": 2,
+          "name": "Mechanical Guardians",
+          "flavour": "Their creators are long since dust,\nbut their duty remains.",
+          "stats": [
+            "Non-Unique Strongboxes are guarded by a dormant Construct\nThese Strongboxes only roll Modifiers which apply to the Construct\nOpening the Strongbox activates the Construct",
+            "Strongboxes have 2% increased Item Quantity per Modifier"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone8.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive8.dds"
+        },
+        {
+          "id": "DoryaniKeystone9",
+          "row": 3,
+          "col": 3,
+          "name": "Hidden Patterns",
+          "flavour": "It's all connected. The Grand Project...\nI can almost see its intent...",
+          "stats": [
+            "10% chance when completing a Map to make nearby Maps accessible"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone9.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive9.dds"
+        },
+        {
+          "id": "DoryaniKeystone10",
+          "row": 4,
+          "col": 1,
+          "name": "Dam the River",
+          "flavour": "There's some sort of energy flow\nunderneath reality. Could it be...?",
+          "stats": [
+            "Azmeri Spirits only Possess monsters after reaching maximum empowerment"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone10.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive10.dds"
+        },
+        {
+          "id": "DoryaniKeystone11",
+          "row": 4,
+          "col": 2,
+          "name": "Remnants of Greatness",
+          "flavour": "They are drawn to the power of the\nGrand Project. They know not why.",
+          "stats": [
+            "Map Bosses have 20% chance to be guarding a Precursor Terraformer which can be used to change the biome of a group of maps nearby"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone11.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive11.dds"
+        },
+        {
+          "id": "DoryaniKeystone12",
+          "row": 4,
+          "col": 3,
+          "name": "Head of the Snake",
+          "flavour": "We need a smarter strategy.\nWe must aim for the top.",
+          "stats": [
+            "Pinnacle Bosses have a single Revive",
+            "Pinnacle Bosses have 25% chance to drop an additional Unique item",
+            "Powerful Map Bosses have 5% chance when defeated to reveal a nearby Citadel"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystone12.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/DoryaniKeystoneActive12.dds"
+        }
+      ]
+    },
+    {
+      "id": "Hilda",
+      "name": "Hilda's Hunting",
+      "budget": 4,
+      "portrait": "Art/Textures/Interface/2D/2DArt/UIImages/InGame/AtlasScreen/KeystonesUI/Master2Normal.dds",
+      "keystones": [
+        {
+          "id": "HildaKeystone1",
+          "row": 1,
+          "col": 1,
+          "name": "Breeding Season",
+          "flavour": "What's gotten into this lot, I wonder?",
+          "stats": [
+            "Rare Monsters have 25% increased chance of Monster Modifiers",
+            "15% increased Rare Monsters"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone1.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive1.dds"
+        },
+        {
+          "id": "HildaKeystone2",
+          "row": 1,
+          "col": 2,
+          "name": "Mighty Prey",
+          "flavour": "Some days you're the spear,\nsome days you're the boar!",
+          "stats": [
+            "25% chance to upgrade Map Bosses to Powerful Map Bosses"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone2.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive2.dds"
+        },
+        {
+          "id": "HildaKeystone3",
+          "row": 1,
+          "col": 3,
+          "name": "Scarred Lands",
+          "flavour": "Something terrible\nhappened here long ago.",
+          "stats": [
+            "20% increased number of Rare Expedition Monsters",
+            "15% increased number of Runic Monster Markers"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone3.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive3.dds"
+        },
+        {
+          "id": "HildaKeystone4",
+          "row": 2,
+          "col": 1,
+          "name": "Dangerous Game",
+          "flavour": "They're not gonna make it easy.",
+          "stats": [
+            "Rogue Exiles have 20% chance to Flee to an adjacent Map and upgrade their Equipment"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone4.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive4.dds"
+        },
+        {
+          "id": "HildaKeystone5",
+          "row": 2,
+          "col": 2,
+          "name": "Soul Eaters",
+          "flavour": "Some days, the hunt is\nthankless and brutal.",
+          "stats": [
+            "Map Bosses have 2% increased Effectiveness per 100 Power of Monsters slain in the Area"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone5.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive5.dds"
+        },
+        {
+          "id": "HildaKeystone6",
+          "row": 2,
+          "col": 3,
+          "name": "Will of the Draíocht",
+          "flavour": "Sometimes, they hold out for bigger prey.\nI ken there's a reason.",
+          "stats": [
+            "Azmeri Spirits cannot Possess Rare Monsters"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone6.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive6.dds"
+        },
+        {
+          "id": "HildaKeystone7",
+          "row": 3,
+          "col": 1,
+          "name": "Call of the Spirits",
+          "flavour": "All you've got do is listen, aye,\nand they'll guide you on.",
+          "stats": [
+            "Possessed Unique Monsters release Spirits on death"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone7.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive7.dds"
+        },
+        {
+          "id": "HildaKeystone8",
+          "row": 3,
+          "col": 2,
+          "name": "Ancient Inscriptions",
+          "flavour": "Got no idea what they say,\nbut they seem to fit together.",
+          "stats": [
+            "8% increased effect of Explicit Modifiers on Tablets for each type of Tablet affecting Map area"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone8.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive8.dds"
+        },
+        {
+          "id": "HildaKeystone9",
+          "row": 3,
+          "col": 3,
+          "name": "Lethal Adaptation",
+          "flavour": "Something's changin' 'em.\nBe ready to get bloody.",
+          "stats": [
+            "40% increased Effectiveness of Unique Monsters with Modifiers"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone9.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive9.dds"
+        },
+        {
+          "id": "HildaKeystone10",
+          "row": 4,
+          "col": 1,
+          "name": "Patient Battue",
+          "flavour": "I'll make some noise and holler. Let's\nsee if I can drive them your way!",
+          "stats": [
+            "25% chance 1 Rare Monster is replaced by a random Map Boss",
+            "5% chance 3 additional Rare Monsters are replaced by a random Map Boss"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone10.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive10.dds"
+        },
+        {
+          "id": "HildaKeystone11",
+          "row": 4,
+          "col": 2,
+          "name": "Gutting and Skinning",
+          "flavour": "Use every part of what you kill.\nTo do otherwise is disrespectful.",
+          "stats": [
+            "Pinnacle Bosses may be scavenged for 5% chance to drop an additional Unique item",
+            "1% chance Unique Monsters may be scavenged for a Unique item"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone11.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive11.dds"
+        },
+        {
+          "id": "HildaKeystone12",
+          "row": 4,
+          "col": 3,
+          "name": "Claimed Territories",
+          "flavour": "You really wanna challenge their claim?\nAlright then... let's see how this goes.",
+          "stats": [
+            "Overlord's Influence and Overlord's Domain Atlas Passive Skills have 45% chance to add twice as much content"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystone12.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/HildaKeystoneActive12.dds"
+        }
+      ]
+    },
+    {
+      "id": "Jado",
+      "name": "Jado's Spycraft",
+      "budget": 4,
+      "portrait": "Art/Textures/Interface/2D/2DArt/UIImages/InGame/AtlasScreen/KeystonesUI/Master3Normal.dds",
+      "keystones": [
+        {
+          "id": "JadoKeystone1",
+          "row": 1,
+          "col": 1,
+          "name": "Trove Seekers",
+          "flavour": "The Order hunts and secures artefacts\ntoo powerful for the world to handle.",
+          "stats": [
+            "100% increased amount of Rare Chests",
+            "Strongboxes have 100% increased chance to be Unique"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone1.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive1.dds"
+        },
+        {
+          "id": "JadoKeystone2",
+          "row": 1,
+          "col": 2,
+          "name": "In The Wrong Hands",
+          "flavour": "...there is no telling what damage\ncould be wrought by such relics.",
+          "stats": [
+            "Powerful Map Bosses drop an additional unique item"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone2.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive2.dds"
+        },
+        {
+          "id": "JadoKeystone3",
+          "row": 1,
+          "col": 3,
+          "name": "Unexpected Missions",
+          "flavour": "We go where our duty demands.",
+          "stats": [
+            "Corrupted Waystones open a Random Map Area when used on Basic Maps",
+            "Corrupted Waystones open Maps with 1 additional random Modifier"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone3.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive3.dds"
+        },
+        {
+          "id": "JadoKeystone4",
+          "row": 2,
+          "col": 1,
+          "name": "Unforeseen Threats",
+          "flavour": "We must remain vigilant.",
+          "stats": [
+            "5% chance on completing Maps for a nearby Anomaly Map to be revealed"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone4.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive4.dds"
+        },
+        {
+          "id": "JadoKeystone5",
+          "row": 2,
+          "col": 2,
+          "name": "Mysterious Gifts",
+          "flavour": "I have no answers for you.\nSome things... simply exist.",
+          "stats": [
+            "Unique Monsters have 1% chance to drop a Cryptic Key",
+            "Rare Strongbox Monsters have 5% chance to drop a Cryptic Key"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone5.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive5.dds"
+        },
+        {
+          "id": "JadoKeystone6",
+          "row": 2,
+          "col": 3,
+          "name": "Eastern Knowledge",
+          "flavour": "The Order has had Kalguuran\nmembers... at times.",
+          "stats": [
+            "Verisium Remnants have 10% chance to be rolled an additional time, keeping the rarest outcome"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone6.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive6.dds"
+        },
+        {
+          "id": "JadoKeystone7",
+          "row": 3,
+          "col": 1,
+          "name": "Partial Translations",
+          "flavour": "We have spent centuries deciphering\nPrecursor writings. We know... a little.",
+          "stats": [
+            "Randomly gain between 0 and 40% increased effect of Explicit Modifiers on Tablets"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone7.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive7.dds"
+        },
+        {
+          "id": "JadoKeystone8",
+          "row": 3,
+          "col": 2,
+          "name": "Stolen Relics",
+          "flavour": "Twenty years ago, the Order lost\nmuch. We will recover it.",
+          "stats": [
+            "Unique Strongboxes may be the Legacy of the Order, dropping a Twilight Reliquary Key"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone8.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive8.dds"
+        },
+        {
+          "id": "JadoKeystone9",
+          "row": 3,
+          "col": 3,
+          "name": "Long Days",
+          "flavour": "We do not have the benefit of rest.\nOur task is never complete.",
+          "stats": [
+            "20% more chance of Random Extra Content"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone9.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive9.dds"
+        },
+        {
+          "id": "JadoKeystone10",
+          "row": 4,
+          "col": 1,
+          "name": "Keen Appraisal",
+          "flavour": "As a seeker of powerful artefacts,\nI know how to spot master works.",
+          "stats": [
+            "50% increased Exceptional Items found"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone10.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive10.dds"
+        },
+        {
+          "id": "JadoKeystone11",
+          "row": 4,
+          "col": 2,
+          "name": "Untold Histories",
+          "flavour": "We are keepers of a world lost\nto the marches of time.",
+          "stats": [
+            "Pinnacle Bosses have an 50% increased chance to drop Lineage Supports",
+            "Pinnacle Bosses take 35% less Damage",
+            "35% increased chance to find Lineage Supports"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone11.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive11.dds"
+        },
+        {
+          "id": "JadoKeystone12",
+          "row": 4,
+          "col": 3,
+          "name": "Ancient Activations",
+          "flavour": "There is a great mystery all around us.\nBe careful what you disturb.",
+          "stats": [
+            "Powerful Map Bosses have 5% chance to add a Ancient Modifiers to a nearby Map"
+          ],
+          "iconDds": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystone12.dds",
+          "iconDdsActive": "Art/2DArt/SkillIcons/passives/AtlasMasters/JadoKeystoneActive12.dds"
+        }
+      ]
+    }
+  ]
+}

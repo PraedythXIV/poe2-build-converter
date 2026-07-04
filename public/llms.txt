@@ -1,0 +1,22 @@
+# PoE 2 - Sweet Vision
+
+> A free, client-side tool that converts a Path of Building 2 (PoB2) export code into an in-game
+> Path of Exile 2 `.build` (Build Planner) file, plus shareable planners for the Atlas and Genesis
+> passive trees, a distilled-emotion crafting reference, and live market prices. All conversion runs
+> in the browser — build data never leaves the device.
+
+This is not affiliated with or endorsed by Grinding Gear Games. All game data and art are GGG's.
+
+## Tools
+
+- [Convert](./#convert): paste a PoB2 import/export code and download the in-game `.build` file, with a verified breakdown, a read-only passive-tree view, and per-loadout variants.
+- [Atlas planner](./#atlas): plan and share the Atlas passive tree.
+- [Genesis planner](./#genesis): plan and share the Genesis passive tree.
+- [Emotions](./#emotions): distilled-emotion crafting reference (anoint / jewel / waystone recipes).
+- [Prices](./#prices): opt-in live market prices for items.
+- [FAQ](./#faq): how the converter works, data sources, and privacy.
+
+## Reference
+
+- [GGG developer docs](https://www.pathofexile.com/developer/docs/index): the official Path of Exile Build Planner / API documentation the `.build` format follows.
+- [Path of Exile 2 Wiki](https://www.poe2wiki.net/): community reference for PoE2 mechanics and items.

@@ -1,0 +1,72 @@
+# Codecov configuration — https://docs.codecov.com/docs/codecov-yaml
+# Validate: curl --data-binary @codecov.yml https://codecov.io/validate
+
+codecov:
+  require_ci_to_pass: true # don't post a green coverage status if CI itself failed
+
+coverage:
+  precision: 2
+  round: down
+  range: '55...85' # badge/status colour ramp: red below 55%, green above 85%
+  status:
+    project:
+      default:
+        target: auto # compare to the base commit rather than an absolute % …
+        threshold: 1% # … and tolerate a 1% dip so tiny refactors don't fail the check
+    patch:
+      default:
+        target: 80% # new / changed lines in a PR should be well covered
+        threshold: 0%
+
+comment:
+  layout: 'reach, diff, flags, components, files'
+  behavior: default
+  require_changes: false
+
+# Flags tag an upload so its slice of coverage is tracked on its own. poe2 runs a single vitest
+# suite → one `unit` flag (applied via the codecov-action `flags:` input in ci.yml). carryforward
+# reuses a flag's last coverage on runs that don't re-measure it.
+flag_management:
+  default_rules:
+    carryforward: true
+  individual_flags:
+    - name: unit
+      paths:
+        - src/
+
+# Components group files by path for a per-area breakdown in the report + PR comment (no upload
+# change needed). These mirror the src/ module map so coverage is legible per subsystem.
+component_management:
+  default_rules:
+    statuses:
+      - type: project
+        target: auto
+        threshold: 1%
+  individual_components:
+    - component_id: convert_engine
+      name: convert-engine
+      paths: ['src/convert/**', 'src/pob/**']
+    - component_id: items
+      name: items-tiers
+      paths: ['src/items/**']
+    - component_id: planners
+      name: tree-atlas-genesis
+      paths: ['src/tree/**', 'src/atlas/**', 'src/genesis/**']
+    - component_id: economy
+      name: economy-emotions
+      paths: ['src/economy/**', 'src/emotions/**']
+    - component_id: core
+      name: audit-export-ui
+      paths: ['src/audit/**', 'src/export/**', 'src/ui/**']
+
+# Not app runtime or not our code — keep them out of the coverage denominator. (vitest's coverage
+# config already restricts instrumentation to src/**/*.ts minus vendor + .d.ts; this is the
+# report-side belt-and-suspenders.)
+ignore:
+  - 'src/data/**'
+  - 'src/assets/**'
+  - 'src/vendor/**'
+  - '**/*.d.ts'
+  - 'scripts/**'
+  - 'server/**'
+  - 'tests/**'

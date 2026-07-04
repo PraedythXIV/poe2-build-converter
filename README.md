@@ -60,12 +60,19 @@ Build / test / data-pipeline issues live in **[TROUBLESHOOTING.md](TROUBLESHOOTI
 
 ```bash
 npm install
-npm test            # vitest: engine, panels, tree, psg decoder, tiers, BFF (375 tests)
+npm test            # vitest: engine, panels, tree, psg decoder, tiers, BFF (393 tests)
+npm run test:coverage  # the same suite with v8 coverage (lcov + summary in coverage/)
 npm run dev         # live dev server (http://localhost:5173)
 npm run build       # typecheck + multi-file, content-hashed, code-split bundle -> dist/
 npm run serve:bff   # local price proxy for the Market prices card (http://localhost:8787)
 npm run check:compliance  # license allowlist + provenance guards
 ```
+
+### Test coverage
+
+Coverage, bundle size and test results are tracked on [Codecov](https://app.codecov.io/github/PraedythXIV/poe2-build-converter). The engine (convert / pob / items / audit / export) is covered ~95%; the overall figure is lower because the Canvas2D/WebGL/DOM UI can't run under jsdom. Each region is a slice below — inner ring is the whole project, outer rings are folders then files; size = statements, colour = coverage.
+
+[![coverage sunburst](https://codecov.io/github/PraedythXIV/poe2-build-converter/graphs/sunburst.svg)](https://app.codecov.io/github/PraedythXIV/poe2-build-converter)
 
 The built `dist/` is a plain static site — serve it over http from any host (GitHub Pages / CF Pages); `file://` won't work (module scripts + asset fetches need an origin). The only backend is the optional, self-hostable price proxy (see [server/README.md](server/README.md)).
 

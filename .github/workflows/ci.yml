@@ -33,6 +33,7 @@ jobs:
         with:
           use_oidc: true # tokenless via GitHub OIDC (needs id-token: write above) — no CODECOV_TOKEN secret to manage
           files: ./coverage/lcov.info
+          flags: unit # tag this upload as the unit suite (see flag_management in codecov.yml)
           slug: PraedythXIV/poe2-build-converter
           fail_ci_if_error: false # a Codecov outage must never fail the build
       - name: Upload test results to Codecov (Test Analytics)

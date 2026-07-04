@@ -63,9 +63,19 @@ export interface BgHandle {
   recolor: () => void
 }
 
-/** Mount the marble wallpaper on a canvas. Returns null if WebGL is unavailable. */
+/** Mount the marble wallpaper on a canvas. Returns null if WebGL is unavailable —
+ *  or only available as a software rasterizer (see failIfMajorPerformanceCaveat below). */
 export function mountMarble(canvas: HTMLCanvasElement): BgHandle | null {
-  const gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false })
+  // failIfMajorPerformanceCaveat: a software (CPU-rasterized) context is worse than no context —
+  // an ambient wallpaper must be free, and on GPU-less machines (old hardware, VMs, remote
+  // desktops, blocklisted drivers) the animated shader costs 500ms+ of main-thread blocking.
+  // Those machines take the static-background fallback instead; GPU machines are unaffected.
+  const gl = canvas.getContext('webgl', {
+    alpha: false,
+    antialias: false,
+    depth: false,
+    failIfMajorPerformanceCaveat: true,
+  })
   if (!gl) {
     canvas.style.background = 'var(--surface-1)'
     return null

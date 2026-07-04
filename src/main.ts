@@ -1447,8 +1447,9 @@ function setBg(on: boolean): void {
     void loadMarble().then(() => {
       if (!bgOn) return // toggled back off while the chunk was loading
       els.bg.hidden = false // restore the canvas to the compositor (still opacity 0)
-      bg?.start() // paints the first frame synchronously…
-      requestAnimationFrame(() => els.bg.classList.add('bg-on')) // …then fade that frame in
+      bg?.start() // inline path paints synchronously; worker path posts 'start' (first paint ~1 frame later)
+      // fade in — opacity starts at 0, so the ~1-frame async paint on the worker path is invisible
+      requestAnimationFrame(() => els.bg.classList.add('bg-on'))
     })
   } else {
     els.bg.classList.remove('bg-on') // fade out

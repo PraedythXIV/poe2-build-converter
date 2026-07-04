@@ -642,15 +642,11 @@ export const copy = {
     `aren't in the current tree data (likely an older patch). They can't be converted either — ` +
     `the .build skips them (the conversion warning lists them). Re-exporting the build on the ` +
     `current tree avoids it.`,
-  provenance: (
-    captured: string,
-    patch: string,
-    passives: number | undefined,
-    gems: number | undefined,
-    uniques: number | undefined,
-  ) =>
-    `Lookup data captured ${captured} (PoE2 ${patch}) — ${passives} passives, ` +
-    `${gems} gems, ${uniques} uniques. Passive tree from GGG's poe2-skilltree-export; ` +
+  // No table counts here (owner 2026-07-04): end users don't need them and misread them as
+  // game facts (e.g. the 1784-entry unique-name table ≠ the ~493 uniques the game has).
+  provenance: (captured: string, patch: string) =>
+    `Lookup data captured ${captured} (PoE2 ${patch}). ` +
+    `Passive tree from GGG's poe2-skilltree-export; ` +
     `gem/unique/mod data from our own pathofexile-dat extraction of the game files.`,
 
   // ── FAQ (route-faq) — ADD / EDIT / DELETE a Q&A by editing this array; it's rendered into the page

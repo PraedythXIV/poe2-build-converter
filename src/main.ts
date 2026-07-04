@@ -1236,14 +1236,7 @@ function renderContents(s: BuildSummary): void {
 }
 
 // ── boot ─────────────────────────────────────────────────────────────────────
-const c = provenance.counts
-els.provenance.textContent = copy.provenance(
-  provenance.captured,
-  provenance.poe2Patch,
-  c.passiveNodes,
-  c.gems,
-  c.uniques,
-)
+els.provenance.textContent = copy.provenance(provenance.captured, provenance.poe2Patch)
 setMode('paste')
 setStatus('idle', copy.status.idle)
 

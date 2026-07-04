@@ -60,7 +60,7 @@ Build / test / data-pipeline issues live in **[TROUBLESHOOTING.md](TROUBLESHOOTI
 
 ```bash
 npm install
-npm test            # vitest: engine, panels, tree, psg decoder, tiers, BFF (393 tests)
+npm test            # vitest: engine, panels, tree, psg decoder, tiers, BFF (567 tests)
 npm run test:coverage  # the same suite with v8 coverage (lcov + summary in coverage/)
 npm run dev         # live dev server (http://localhost:5173)
 npm run build       # typecheck + multi-file, content-hashed, code-split bundle -> dist/
@@ -70,7 +70,7 @@ npm run check:compliance  # license allowlist + provenance guards
 
 ### Test coverage
 
-Coverage, bundle size and test results are tracked on [Codecov](https://app.codecov.io/github/PraedythXIV/poe2-build-converter). The engine (convert / pob / items / audit / export) is covered ~95%; the overall figure is lower because the Canvas2D/WebGL/DOM UI can't run under jsdom. Each region is a slice below — inner ring is the whole project, outer rings are folders then files; size = statements, colour = coverage.
+Coverage, bundle size and test results are tracked on [Codecov](https://app.codecov.io/github/PraedythXIV/poe2-build-converter). The logic — convert engine, panels, planners' data, audit, economy — is well covered (~82% lines overall); what's left is the Canvas2D/WebGL rendering the browser draws, which jsdom can't run. Each region is a slice below — inner ring is the whole project, outer rings are folders then files; size = statements, colour = coverage.
 
 [![coverage sunburst](https://codecov.io/github/PraedythXIV/poe2-build-converter/graphs/sunburst.svg)](https://app.codecov.io/github/PraedythXIV/poe2-build-converter)
 

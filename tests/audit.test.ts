@@ -8,8 +8,9 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { summarize } from '../src/convert/summarize'
-import type { BuildSummary, SummaryItem } from '../src/convert/summarize'
+import type { SummaryItem } from '../src/convert/summarize'
 import { emptySummaryItem } from './helpers/pobBuild'
+import { byCode, makeSummary } from './helpers/auditSummary'
 import { auditBuild } from '../src/audit/audit'
 import type { AuditFinding } from '../src/audit/audit'
 import { renderAuditPanel } from '../src/ui/auditPanel'
@@ -17,31 +18,8 @@ import { renderStatsPanel } from '../src/ui/statsPanel'
 
 const XML = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'pob2-build.xml'), 'utf8')
 
-const byCode = (f: AuditFinding[], code: string): AuditFinding[] => f.filter((x) => x.code === code)
 const codes = (f: AuditFinding[]): string[] => f.map((x) => x.code)
 
-function makeSummary(over: Partial<BuildSummary> = {}): BuildSummary {
-  return {
-    className: 'Monk',
-    ascendancy: null,
-    level: 90,
-    mainSkill: null,
-    items: [],
-    itemCount: 0,
-    uniqueCount: 0,
-    jewels: [],
-    skills: [],
-    keystones: [],
-    notables: [],
-    ascNotables: [],
-    masteries: [],
-    passiveCount: 0,
-    playerStats: {},
-    specNodes: [],
-    ascendancyInternalId: null,
-    ...over,
-  }
-}
 function makeItem(over: Partial<SummaryItem> = {}): SummaryItem {
   return emptySummaryItem({ slot: 'Helmet', rarity: 'RARE', name: 'Test Helm', baseType: 'Iron Hat', ...over })
 }

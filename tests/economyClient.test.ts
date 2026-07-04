@@ -13,19 +13,7 @@ import {
   setBffBase,
 } from '../src/economy/client'
 import { UNIQUE_CATEGORIES as WORKER_UNIQUE_CATEGORIES } from '../server/worker.mjs'
-
-function stubFetch(respond: (url: string) => Response | Promise<Response>) {
-  const urls: string[] = []
-  vi.stubGlobal('fetch', (input: RequestInfo | URL) => {
-    urls.push(String(input))
-    return Promise.resolve(respond(String(input)))
-  })
-  return urls
-}
-
-function jsonOk(obj: unknown, status = 200): Response {
-  return new Response(JSON.stringify(obj), { status, headers: { 'content-type': 'application/json' } })
-}
+import { jsonOk, stubFetch } from './helpers/economyStub'
 
 beforeEach(() => {
   localStorage.clear()

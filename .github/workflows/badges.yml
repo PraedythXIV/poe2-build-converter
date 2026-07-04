@@ -48,9 +48,10 @@ jobs:
           const fs = require('fs');
           const r = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/vitest.json', 'utf8'));
           const ok = r.success && r.numFailedTests === 0;
-          // suite-level failures (import/collection errors) set success:false with 0 failed tests
+          // suite-level failures (import/collection errors) set success:false with 0 failed tests.
+          // When failing, show the total too ("2/388 failing") so the count has a denominator.
           const message = ok ? `${r.numPassedTests} passing`
-            : r.numFailedTests > 0 ? `${r.numFailedTests} failing` : 'suite error';
+            : r.numFailedTests > 0 ? `${r.numFailedTests}/${r.numTotalTests} failing` : 'suite error';
           if (!ok) {
             // name the failures — the JSON report dies with the runner, so the log/summary is
             // the only place a red pill can ever be diagnosed from

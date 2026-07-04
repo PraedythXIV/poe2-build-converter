@@ -100,10 +100,13 @@ describe('UI wiring', () => {
     const convertBtn = document.getElementById('convert') as HTMLButtonElement
     code.value = SAMPLE_XML
     convertBtn.click()
-    // the passive tree is code-split now → syncTree mounts it asynchronously; let the dynamic
-    // import + toolbar render settle before asserting on the tree card (the breakdown/stats/gear
-    // above render synchronously, so this only gates the B1 tree assertions).
-    await new Promise((r) => setTimeout(r, 50))
+    // the passive tree is code-split now → syncTree mounts it asynchronously; poll until the
+    // toolbar renders before asserting on the tree card (the breakdown/stats/gear above render
+    // synchronously, so this only gates the B1 tree assertions). Polling, not a fixed sleep —
+    // fixed margins flake on loaded CI runners.
+    await vi.waitFor(() => expect(document.querySelector('#tree-toolbar .ttb-count b')).not.toBeNull(), {
+      timeout: 3000,
+    })
 
     // C1 — PoB's exported stats render in curated groups
     const stats = document.getElementById('bc-stats') as HTMLElement
@@ -132,10 +135,12 @@ describe('UI wiring', () => {
 
     // B4 — the economy card (lazy: mounts when the Prices tab is opened) renders idle, zero-network
     ;(document.getElementById('nav-prices') as HTMLButtonElement).click()
-    await new Promise((r) => setTimeout(r, 50)) // economy panel is code-split — let it mount
     const econ = document.getElementById('econ-mount') as HTMLElement
-    // opens to a three-card landing (Economy / Currency Exchange / Unique Items), idle + zero-network
-    expect(econ.querySelectorAll('#ec-landing .ec-enter').length).toBe(3)
+    // economy panel is code-split — poll until it mounts. Opens to a three-card landing
+    // (Economy / Currency Exchange / Unique Items), idle + zero-network
+    await vi.waitFor(() => expect(econ.querySelectorAll('#ec-landing .ec-enter').length).toBe(3), {
+      timeout: 3000,
+    })
     expect((econ.querySelector('#ec-app') as HTMLElement).hidden).toBe(true)
     expect(econ.querySelector('#ec-league-name')?.textContent).toBe('—')
     ;(document.getElementById('nav-atlas') as HTMLButtonElement).click() // restore the boot route (later #atlas= tests expect it active)
@@ -169,8 +174,9 @@ describe('UI wiring', () => {
     ;(document.getElementById('download') as HTMLButtonElement).click()
     const note = document.getElementById('dl-note') as HTMLElement
     expect(note.textContent).toContain('Downloading') // phase 1, immediately
-    await new Promise((r) => setTimeout(r, 700)) // single file: flip scheduled at ~400ms
-    expect(note.textContent).toContain('Downloaded') // phase 2, after the last handoff
+    // phase 2 is scheduled at ~400ms for a single file — poll for it instead of sleeping a
+    // fixed margin (which flakes on loaded CI runners)
+    await vi.waitFor(() => expect(note.textContent).toContain('Downloaded'), { timeout: 3000 })
   })
 
   // Step 5 anti-scroll-fest: the emitted .build JSON lives in a native <details> that is COLLAPSED
@@ -253,14 +259,16 @@ describe('UI wiring', () => {
       const code = document.getElementById('code') as HTMLTextAreaElement
       code.value = 'https://pobb.in/TestId01'
       code.dispatchEvent(new Event('input', { bubbles: true }))
-      await new Promise((r) => setTimeout(r, 450)) // 350 ms debounce + fetch microtasks
+      // 350 ms debounce + fetch microtasks — poll for the flow's final step (the import note)
+      // instead of sleeping a fixed margin, then assert the intermediate effects
+      const note = document.getElementById('import-note') as HTMLElement
+      await vi.waitFor(() => expect(note.textContent).toContain('Loaded build from pobb.in/TestId01'), {
+        timeout: 3000,
+      })
 
       expect(urls).toEqual(['http://localhost:8787/api/pob/TestId01'])
       // raw code replaced the pasted link (textarea .value normalizes CRLF → LF per spec)
       expect(code.value).toBe(SAMPLE_XML.replace(/\r\n/g, '\n'))
-      // import feedback shows on the Import step's own note (not the Convert step's warnings)
-      const note = document.getElementById('import-note') as HTMLElement
-      expect(note.textContent).toContain('Loaded build from pobb.in/TestId01')
 
       ;(document.getElementById('convert') as HTMLButtonElement).click()
       expect((document.getElementById('status') as HTMLElement).dataset.state).toBe('done')
@@ -278,7 +286,8 @@ describe('UI wiring', () => {
       const code = document.getElementById('code') as HTMLTextAreaElement
       code.value = 'https://pobb.in/LinkSrc1'
       code.dispatchEvent(new Event('input', { bubbles: true }))
-      await new Promise((r) => setTimeout(r, 450)) // 350 ms debounce + fetch microtasks
+      // 350 ms debounce + fetch microtasks — poll until the fetched code replaced the pasted link
+      await vi.waitFor(() => expect(code.value).not.toContain('pobb.in'), { timeout: 3000 })
       ;(document.getElementById('convert') as HTMLButtonElement).click()
       expect((document.getElementById('json') as HTMLPreElement).textContent).toContain(
         '"link": "https://pobb.in/LinkSrc1"',
@@ -301,11 +310,12 @@ describe('UI wiring', () => {
       const code = document.getElementById('code') as HTMLTextAreaElement
       code.value = 'pobb.in/u/someone/BrokenId1' // scheme-less /u/<user>/<id> form
       code.dispatchEvent(new Event('input', { bubbles: true }))
-      await new Promise((r) => setTimeout(r, 450))
+      const note = document.getElementById('import-note') as HTMLElement
+      await vi.waitFor(() => expect(note.textContent).toContain("Couldn't load pobb.in/BrokenId1"), {
+        timeout: 3000,
+      })
 
       expect(code.value).toBe('pobb.in/u/someone/BrokenId1') // input left untouched
-      const note = document.getElementById('import-note') as HTMLElement
-      expect(note.textContent).toContain("Couldn't load pobb.in/BrokenId1")
       expect(note.textContent).toContain('serve:bff') // actionable localhost hint
     } finally {
       vi.unstubAllGlobals()
@@ -319,14 +329,15 @@ describe('UI wiring', () => {
     const note = document.getElementById('import-note') as HTMLElement
     code.value = 'not a real code'
     code.dispatchEvent(new Event('input', { bubbles: true }))
-    await new Promise((r) => setTimeout(r, 350)) // 250 ms preview debounce
-    expect(note.textContent?.length).toBeGreaterThan(0)
-    expect(note.textContent?.toLowerCase()).toMatch(/base64|code|xml/)
+    // 250 ms preview debounce — poll for the decode error itself (the note may still hold the
+    // PREVIOUS test's import warning until the debounce replaces it, so "non-empty" won't do)
+    await vi.waitFor(() => expect(note.textContent?.toLowerCase()).toMatch(/base64|code|xml/), {
+      timeout: 3000,
+    })
 
     code.value = SAMPLE_XML
     code.dispatchEvent(new Event('input', { bubbles: true }))
-    await new Promise((r) => setTimeout(r, 350))
-    expect(note.textContent).toBe('')
+    await vi.waitFor(() => expect(note.textContent).toBe(''), { timeout: 3000 })
   })
 
   // #2 — gear cards expand into the enriched renderItemDetails() overlay
@@ -387,9 +398,11 @@ describe('UI wiring', () => {
 
   it('Copy plan link writes the canonical #atlas= payload into the URL', async () => {
     ;(document.getElementById('atlas-share') as HTMLButtonElement).click()
-    await new Promise((r) => setTimeout(r, 0)) // the handler is async (clipboard attempt)
-    // round-trip through the live view re-encodes to the same canonical payload
-    expect(window.location.hash).toBe(`#atlas=${encodeAtlasPlan(ATLAS_BOOT_IDS)}`)
+    // the handler is async (clipboard attempt); round-trip through the live view re-encodes
+    // to the same canonical payload
+    await vi.waitFor(() => expect(window.location.hash).toBe(`#atlas=${encodeAtlasPlan(ATLAS_BOOT_IDS)}`), {
+      timeout: 3000,
+    })
   })
 
   // a share link pasted into the address bar of an ALREADY-OPEN tab fires hashchange (no reload) —
@@ -398,12 +411,17 @@ describe('UI wiring', () => {
     const third = Object.keys(atlasGraph.nodes).filter((k) => atlasGraph.nodes[k]?.atlasRoot !== true)[2]!
     window.location.hash = `#atlas=${encodeAtlasPlan([third])}`
     window.dispatchEvent(new HashChangeEvent('hashchange'))
-    await new Promise((r) => setTimeout(r, 50)) // ensureAtlas microtasks
-    const allocated = [...document.querySelectorAll('#atlas-counts .at-ct-n')].reduce(
-      (a, e) => a + Number(e.textContent),
-      0,
+    // ensureAtlas microtasks — poll until the 2-node boot plan is REPLACED by the new 1-node link
+    await vi.waitFor(
+      () => {
+        const allocated = [...document.querySelectorAll('#atlas-counts .at-ct-n')].reduce(
+          (a, e) => a + Number(e.textContent),
+          0,
+        )
+        expect(allocated).toBe(1)
+      },
+      { timeout: 3000 },
     )
-    expect(allocated).toBe(1) // the 2-node boot plan was REPLACED by the new 1-node link
   })
 
   // a corrupt/truncated share payload must say so — landing on a silently-empty planner is
@@ -411,17 +429,15 @@ describe('UI wiring', () => {
   it('shows a notice when an #atlas= share payload fails to decode', async () => {
     window.location.hash = '#atlas=!!!not-a-payload!!!'
     window.dispatchEvent(new HashChangeEvent('hashchange'))
-    await new Promise((r) => setTimeout(r, 50))
     const note = document.getElementById('atlas-note') as HTMLElement
-    expect(note.textContent?.toLowerCase()).toContain('share link')
+    await vi.waitFor(() => expect(note.textContent?.toLowerCase()).toContain('share link'), { timeout: 3000 })
   })
 
   it('shows a notice when a #genesis= share payload fails to decode', async () => {
     window.location.hash = '#genesis=!!!not-a-payload!!!'
     window.dispatchEvent(new HashChangeEvent('hashchange'))
-    await new Promise((r) => setTimeout(r, 50))
     const note = document.getElementById('genesis-note') as HTMLElement
-    expect(note.textContent?.toLowerCase()).toContain('share link')
+    await vi.waitFor(() => expect(note.textContent?.toLowerCase()).toContain('share link'), { timeout: 3000 })
   })
 
   it('multi-loadout build: the loadout dropdown switches the breakdown + pins stats to main', () => {

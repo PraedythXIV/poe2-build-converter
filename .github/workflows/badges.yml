@@ -51,6 +51,15 @@ jobs:
           // suite-level failures (import/collection errors) set success:false with 0 failed tests
           const message = ok ? `${r.numPassedTests} passing`
             : r.numFailedTests > 0 ? `${r.numFailedTests} failing` : 'suite error';
+          if (!ok) {
+            // name the failures — the JSON report dies with the runner, so the log/summary is
+            // the only place a red pill can ever be diagnosed from
+            const names = (r.testResults ?? []).flatMap((f) => (f.assertionResults ?? [])
+              .filter((a) => a.status === 'failed').map((a) => a.fullName));
+            console.log('failing tests:\n' + names.map((n) => `  - ${n}`).join('\n'));
+            if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,
+              '### Failing tests\n' + names.map((n) => `- ${n}`).join('\n') + '\n');
+          }
           fs.mkdirSync('badges-out', { recursive: true });
           fs.writeFileSync('badges-out/tests.json', JSON.stringify({
             schemaVersion: 1,

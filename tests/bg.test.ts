@@ -12,73 +12,7 @@ import {
   createMarbleWorkerHandler,
   type MarbleWorkerIn,
 } from '../src/bg/marbleCore'
-
-// Minimal fake WebGL context — jsdom has no GL, so the program-setup/draw contract is pinned
-// against a happy-path double that records buffer sizing + draw calls.
-const fakeGl = () => {
-  const canvas = { width: 0, height: 0 }
-  const calls: string[] = []
-  const gl = {
-    canvas,
-    calls,
-    VERTEX_SHADER: 35633,
-    FRAGMENT_SHADER: 35632,
-    COMPILE_STATUS: 35713,
-    LINK_STATUS: 35714,
-    ARRAY_BUFFER: 34962,
-    STATIC_DRAW: 35044,
-    FLOAT: 5126,
-    TRIANGLES: 4,
-    createShader: () => ({}),
-    shaderSource: () => {},
-    compileShader: () => {},
-    getShaderParameter: () => true,
-    getShaderInfoLog: () => '',
-    createProgram: () => ({}),
-    attachShader: () => {},
-    linkProgram: () => {},
-    getProgramParameter: () => true,
-    getProgramInfoLog: () => '',
-    useProgram: () => {},
-    createBuffer: () => ({}),
-    bindBuffer: () => {},
-    bufferData: () => {},
-    getAttribLocation: () => 0,
-    enableVertexAttribArray: () => {},
-    vertexAttribPointer: () => {},
-    getUniformLocation: () => ({}),
-    viewport: () => {
-      calls.push('viewport')
-    },
-    uniform2f: () => {},
-    uniform1f: () => {},
-    uniform3f: () => {},
-    drawArrays: () => {
-      calls.push('draw')
-    },
-  }
-  return gl as unknown as WebGLRenderingContext & { calls: string[]; canvas: { width: number; height: number } }
-}
-
-// Worker/OffscreenCanvas doubles — jsdom has neither, so the worker path is driven by stubs.
-class FakeWorker {
-  static instances: FakeWorker[] = []
-  posted: unknown[] = []
-  onmessage: ((e: { data: unknown }) => void) | null = null
-  postMessage(msg: unknown): void {
-    this.posted.push(msg)
-  }
-  terminate(): void {}
-  constructor() {
-    FakeWorker.instances.push(this)
-  }
-}
-const offscreenCanvas = (): HTMLCanvasElement => {
-  const canvas = document.createElement('canvas')
-  // jsdom has no OffscreenCanvas — a bare object stands in for the transferred handle
-  canvas.transferControlToOffscreen = vi.fn(() => ({}) as unknown as OffscreenCanvas)
-  return canvas
-}
+import { fakeGl, FakeWorker, offscreenCanvas } from './helpers/webglStub'
 
 describe('marble background', () => {
   it('shares one context-attrs contract (with the software-rendering refusal) across worker + inline paths', () => {

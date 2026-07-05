@@ -29,7 +29,7 @@ jobs:
       - run: npm run test:coverage # tests + v8 coverage (lcov) + JUnit results (both uploaded below)
       - name: Upload coverage to Codecov (Coverage Analytics)
         if: ${{ !cancelled() }} # upload even if a test failed so the report reflects reality
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         with:
           use_oidc: true # tokenless via GitHub OIDC (needs id-token: write above) — no CODECOV_TOKEN secret to manage
           files: ./coverage/lcov.info
@@ -38,10 +38,12 @@ jobs:
           fail_ci_if_error: false # a Codecov outage must never fail the build
       - name: Upload test results to Codecov (Test Analytics)
         if: ${{ !cancelled() }} # flaky/failed-test detection needs the results even when tests fail
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v7 # NOT the deprecated test-results-action@v1 — v7 detects SHA/branch
         with:
           use_oidc: true
+          report_type: test_results
           files: ./test-results.junit.xml
+          slug: PraedythXIV/poe2-build-converter
           fail_ci_if_error: false
       - name: Build + upload bundle stats to Codecov (Bundle Analysis)
         run: npx vite build # the codecov vite plugin uploads bundle-size stats via OIDC when CODECOV_BUNDLE is set

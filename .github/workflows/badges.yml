@@ -27,12 +27,12 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The write-capable job token must not sit in .git/config while npm ci / npx run
           # third-party code — the publish step below carries its own explicit token.
           persist-credentials: false
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22 # keep all workflows on the same Node (data-refresh.yml set the pace)
           cache: npm

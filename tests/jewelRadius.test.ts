@@ -75,7 +75,13 @@ describe('jewelRadii.json vendors the real PassiveJewelRadii ring bands', () => 
 
 // ── computeJewelSockets — socket-model branches not reached by the geometry tests above ──────────
 /** A one-socket PobBuild wrapping a single jewel at node '1' (only the fields the transform reads). */
-function socketOne(over: { name?: string; baseType?: string; rarity?: string; raw: string; mods?: string[] }): PobBuild {
+function socketOne(over: {
+  name?: string
+  baseType?: string
+  rarity?: string
+  raw: string
+  mods?: string[]
+}): PobBuild {
   const item = { name: 'J', baseType: 'Cobalt Jewel', rarity: 'MAGIC', mods: [] as string[], ...over }
   return { spec: { sockets: [{ nodeId: '1', itemId: 'j' }] }, items: new Map([['j', item]]) } as unknown as PobBuild
 }

@@ -78,7 +78,12 @@ describe('renderAscSplash — flavour quote permutations (cast fake graph)', () 
       ({ ascendancies: new Map([['FA', { id: 'FA', ...asc }]]) }) as unknown as Graph
 
     // array flavourText → lines joined with <br />; a clean 6-hex colour → the --asc-flav style (L122/L125)
-    const arr = renderAscSplash('C', 'FA', null, fake({ name: 'X', flavourText: ['L1', 'L2'], flavourTextColour: 'FF0000' }))
+    const arr = renderAscSplash(
+      'C',
+      'FA',
+      null,
+      fake({ name: 'X', flavourText: ['L1', 'L2'], flavourTextColour: 'FF0000' }),
+    )
     expect(arr.html).toContain('asc-splash-quote')
     expect(arr.html).toContain('L1<br />L2')
     expect(arr.html).toContain('--asc-flav: #ff0000') // sanitized to lowercase

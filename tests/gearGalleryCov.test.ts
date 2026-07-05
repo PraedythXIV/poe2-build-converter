@@ -67,7 +67,9 @@ describe('gearGallery — branch coverage', () => {
   })
   // CLUSTER 111/112/113 — an inBuild:false item (e.g. a jewel on an unallocated node) gets the preview stamp + ○
   it('stamps an inBuild:false item as a preview (○ marker, "preview only")', () => {
-    const html = render(makeSummary({ jewels: [emptySummaryItem({ slot: 'Jewel', name: 'Preview Gem', inBuild: false })] }))
+    const html = render(
+      makeSummary({ jewels: [emptySummaryItem({ slot: 'Jewel', name: 'Preview Gem', inBuild: false })] }),
+    )
     expect(html).toContain('itc-stamp--preview')
     expect(html).toContain('preview only')
     expect(html).toContain('○')

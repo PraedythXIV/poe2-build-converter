@@ -535,9 +535,7 @@ describe('UI wiring', () => {
 
   // ── pobb.in import: a link changed during the debounce window is NOT fetched (stale-id guard) ──
   it('a pobb.in link changed during the debounce is not fetched (stale-id guard)', async () => {
-    const fetchSpy = vi.fn(() =>
-      Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(SAMPLE_XML) }),
-    )
+    const fetchSpy = vi.fn(() => Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(SAMPLE_XML) }))
     vi.stubGlobal('fetch', fetchSpy)
     try {
       const code = document.getElementById('code') as HTMLTextAreaElement

@@ -314,7 +314,12 @@ function stubCallbacks(hit: (wx: number, wy: number) => string | null, sink: str
 }
 
 /** Dispatch a synthetic pointer Event carrying the fields the handlers read. */
-function dispatchPtr(el: HTMLElement, type: string, at: { x: number; y: number }, fields: Record<string, unknown> = {}): Event {
+function dispatchPtr(
+  el: HTMLElement,
+  type: string,
+  at: { x: number; y: number },
+  fields: Record<string, unknown> = {},
+): Event {
   const ev = new Event(type, { cancelable: true, bubbles: true })
   Object.assign(ev, { pointerId: 1, button: 0, clientX: at.x, clientY: at.y, ...fields })
   el.dispatchEvent(ev)
@@ -326,7 +331,10 @@ describe('attachInteractions (pointer / observer edges)', () => {
     const canvas = document.createElement('div')
     ;(canvas as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {}
     const toggled: string[] = []
-    const detach = attachInteractions(canvas, stubCallbacks(() => null, toggled))
+    const detach = attachInteractions(
+      canvas,
+      stubCallbacks(() => null, toggled),
+    )
     dispatchPtr(canvas, 'pointerdown', { x: 6, y: 6 })
     dispatchPtr(canvas, 'pointerup', { x: 6, y: 6 }) // no hit → id is null → onToggle never fires
     expect(toggled).toHaveLength(0)
@@ -347,7 +355,10 @@ describe('attachInteractions (pointer / observer edges)', () => {
     }
     vi.stubGlobal('ResizeObserver', RO)
     const canvas = document.createElement('div')
-    const detach = attachInteractions(canvas, stubCallbacks(() => null, []))
+    const detach = attachInteractions(
+      canvas,
+      stubCallbacks(() => null, []),
+    )
     expect(observed).toEqual([canvas]) // L369 truthy branch → new ResizeObserver(...).observe(canvas)
     detach()
     expect(disconnects).toBe(1) // detach() → ro.disconnect()

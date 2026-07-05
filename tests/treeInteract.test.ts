@@ -412,7 +412,10 @@ describe('mounted tree — real pointer/wheel events over installCanvas2d', () =
   // ── shared setup helpers (collapse the mount → hover / mount → open-pinned-picker boilerplate) ──
   type Mounted = ReturnType<typeof mount>
   /** Build a fixture graph and mount it. */
-  const mountFixture = (rawFn: () => RawTreeGraph, opts: Record<string, unknown> = {}): { graph: TreeGraph; m: Mounted } => {
+  const mountFixture = (
+    rawFn: () => RawTreeGraph,
+    opts: Record<string, unknown> = {},
+  ): { graph: TreeGraph; m: Mounted } => {
     const graph = buildGraph(rawFn())
     return { graph, m: mount({ graph, ...opts }) }
   }
@@ -437,7 +440,9 @@ describe('mounted tree — real pointer/wheel events over installCanvas2d', () =
   }
   /** Click the numbered choice row `idx` in the currently-shown tooltip. */
   const clickChoice = (m: Mounted, idx: number): void => {
-    m.tip.querySelector<HTMLElement>(`[data-choice="${idx}"]`)!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    m.tip
+      .querySelector<HTMLElement>(`[data-choice="${idx}"]`)!
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }))
   }
   it('clicking a choice row in the interactive tooltip auto-paths the mastery and records the pick', () => {
     const { m } = mountHover(choiceRaw) // hover the "Select a bonus" node → interactive tooltip

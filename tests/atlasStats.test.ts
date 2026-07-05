@@ -42,7 +42,13 @@ function mountPanelFixture(): { panel: HTMLElement; toggle: HTMLElement } {
   document.body.innerHTML = '<button id="t"></button><aside id="p"></aside>'
   const panel = document.getElementById('p') as HTMLElement
   const toggle = document.getElementById('t') as HTMLElement
-  mountStatsPanel(panel, toggle, stubView(['A']).view, { A: { stats: ['10% increased Rarity'] } }, { title: 'T', empty: 'E' })
+  mountStatsPanel(
+    panel,
+    toggle,
+    stubView(['A']).view,
+    { A: { stats: ['10% increased Rarity'] } },
+    { title: 'T', empty: 'E' },
+  )
   return { panel, toggle }
 }
 

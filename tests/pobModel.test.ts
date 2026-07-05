@@ -15,7 +15,9 @@ function doc(inner: string, specAttrs = ''): string {
 
 describe('pob model — Build-level (Increment A)', () => {
   it('tolerates a build with NO <Build> section — null/empty context, not a throw (missing-Build)', () => {
-    const b = parsePob('<PathOfBuilding2><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""/></Tree></PathOfBuilding2>')
+    const b = parsePob(
+      '<PathOfBuilding2><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""/></Tree></PathOfBuilding2>',
+    )
     expect(b.className).toBeNull()
     expect(b.level).toBeNull()
     expect(b.buffs).toBeNull()
@@ -78,23 +80,31 @@ describe('pob model — Build-level (Increment A)', () => {
 
 describe('pob model — Spec / Gem (Increments B/C)', () => {
   it('maps an empty <URL></URL> to null (trim → empty → null) (url-empty)', () => {
-    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><URL></URL></Spec></Tree></PathOfBuilding2>')
+    const b = parsePob(
+      '<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><URL></URL></Spec></Tree></PathOfBuilding2>',
+    )
     expect(b.spec.url).toBeNull()
   })
 
   it('defaults a socket with no itemId to "0" (empty socket) (socket-itemId)', () => {
-    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><Sockets><Socket nodeId="100"/></Sockets></Spec></Tree></PathOfBuilding2>')
+    const b = parsePob(
+      '<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><Sockets><Socket nodeId="100"/></Sockets></Spec></Tree></PathOfBuilding2>',
+    )
     expect(b.spec.sockets).toEqual([{ nodeId: '100', itemId: '0' }])
   })
 
   it('defaults a spec with no treeVersion to "unknown" (treeVersion-default)', () => {
-    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec nodes=""/></Tree></PathOfBuilding2>')
+    const b = parsePob(
+      '<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec nodes=""/></Tree></PathOfBuilding2>',
+    )
     expect(b.spec.treeVersion).toBe('unknown')
   })
 
   it('defaults a gem with no level/quality to level 1, quality 0 (gem-level-quality)', () => {
     const b = parsePob(
-      doc('<Skills activeSkillSet="1"><SkillSet id="1"><Skill><Gem gemId="G" skillId="S" nameSpec="T"/></Skill></SkillSet></Skills>'),
+      doc(
+        '<Skills activeSkillSet="1"><SkillSet id="1"><Skill><Gem gemId="G" skillId="S" nameSpec="T"/></Skill></SkillSet></Skills>',
+      ),
     )
     const g = b.skillGroups[0]!.gems[0]!
     expect(g.level).toBe(1)
@@ -196,7 +206,9 @@ describe('pob model — Item body text (Increment D)', () => {
   })
 
   it('never overwrites an inline {range:N} with a competing <ModRange> (inline-range-wins)', () => {
-    const it = itemWith('Rarity: RARE&#10;X&#10;Vaal Regalia&#10;{range:0.9}+(80-120) to maximum Life', [[1, '0.1']]).items.get('1')!
+    const it = itemWith('Rarity: RARE&#10;X&#10;Vaal Regalia&#10;{range:0.9}+(80-120) to maximum Life', [
+      [1, '0.1'],
+    ]).items.get('1')!
     expect(it.parsedMods[0]!.rangeHint).toBe('0.9')
   })
 

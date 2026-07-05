@@ -32,6 +32,24 @@ describe('marble background', () => {
     expect(createMarbleRenderer(gl)).toBeNull()
   })
 
+  it('createMarbleRenderer returns null on any failed GL setup step (→ static-bg fallback)', () => {
+    // each guard degrades the whole renderer to the static background rather than drawing nothing:
+    const noShader = fakeGl()
+    noShader.createShader = (() => null) as unknown as typeof noShader.createShader // createShader failed
+    const noLink = fakeGl()
+    noLink.getProgramParameter = (() => false) as unknown as typeof noLink.getProgramParameter // LINK_STATUS false
+    const noBuffer = fakeGl()
+    noBuffer.createBuffer = (() => null) as unknown as typeof noBuffer.createBuffer // vertex buffer failed
+    const noAttrib = fakeGl()
+    noAttrib.getAttribLocation = (() => -1) as unknown as typeof noAttrib.getAttribLocation // 'p' optimised out
+    expect([
+      createMarbleRenderer(noShader),
+      createMarbleRenderer(noLink),
+      createMarbleRenderer(noBuffer),
+      createMarbleRenderer(noAttrib),
+    ]).toEqual([null, null, null, null])
+  })
+
   it('compiles a real fragment shader — the marble GLSL is present, not an empty placeholder', () => {
     const gl = fakeGl()
     const sources: string[] = []
@@ -56,6 +74,13 @@ describe('marble background', () => {
       200,
       true,
     ])
+  })
+
+  it('draw() paints nothing until the host box is measured — a 0 dimension is a no-op', () => {
+    const gl = fakeGl()
+    const renderer = createMarbleRenderer(gl)!
+    renderer.draw(0, 200, 1, [1, 0, 0], [0, 0, 0]) // W is 0 → the layout box has not been measured yet
+    expect(gl.calls.includes('draw')).toBe(false) // no drawArrays; without the guard it would paint into a 0-wide buffer
   })
 
   it('hands the canvas to a worker when OffscreenCanvas is supported — no main-thread WebGL', () => {
@@ -167,6 +192,28 @@ describe('marble worker handler', () => {
     base: [0, 0, 0],
   })
 
+  // Shared worker-handler fixtures — the common init setup, so each test states only its own action.
+  /** host + handler with a fresh fakeGl already inited at 8×8 (the returned gl records draws/uniforms). */
+  const initedHandler = () => {
+    const h = host()
+    const handle = createMarbleWorkerHandler(h)
+    let gl: ReturnType<typeof fakeGl> | undefined
+    handle(initMsg(() => (gl = fakeGl())))
+    return { h, handle, gl: gl! }
+  }
+  /** host + handler inited against a canvas whose event listeners are captured (for webglcontextlost). */
+  const initedWithListeners = () => {
+    const h = host()
+    const handle = createMarbleWorkerHandler(h)
+    const listeners: Record<string, (e: { preventDefault: () => void }) => void> = {}
+    const canvas = {
+      getContext: () => fakeGl(),
+      addEventListener: (t: string, cb: (e: { preventDefault: () => void }) => void) => (listeners[t] = cb),
+    } as unknown as OffscreenCanvas
+    handle({ type: 'init', canvas, w: 8, h: 8, accent: [1, 0, 0], base: [0, 0, 0] })
+    return { h, handle, listeners }
+  }
+
   it('posts a fallback when the OffscreenCanvas yields no WebGL context', () => {
     const h = host()
     const handle = createMarbleWorkerHandler(h)
@@ -174,19 +221,21 @@ describe('marble worker handler', () => {
     expect(h.rec.fallbacks).toBe(1)
   })
 
-  it('start (motion allowed) paints a frame and schedules the next via requestFrame', () => {
+  it('posts a fallback when the context is fine but the renderer fails to build (shader compile error)', () => {
     const h = host()
     const handle = createMarbleWorkerHandler(h)
-    let gl: ReturnType<typeof fakeGl> | undefined
-    handle(initMsg(() => (gl = fakeGl())))
+    handle(initMsg(() => fakeGl({ compileOk: false }))) // ctx OK, but createMarbleRenderer returns null
+    expect(h.rec.fallbacks).toBe(1) // without the !renderer guard the worker would stay silent, no static bg
+  })
+
+  it('start (motion allowed) paints a frame and schedules the next via requestFrame', () => {
+    const { h, handle, gl } = initedHandler()
     handle({ type: 'start', reduced: false })
-    expect([h.rec.fallbacks, gl!.calls.includes('draw'), h.rec.frames.length]).toEqual([0, true, 1])
+    expect([h.rec.fallbacks, gl.calls.includes('draw'), h.rec.frames.length]).toEqual([0, true, 1])
   })
 
   it('a second start while already running does NOT stack a second rAF loop', () => {
-    const h = host()
-    const handle = createMarbleWorkerHandler(h)
-    handle(initMsg(() => fakeGl()))
+    const { h, handle } = initedHandler()
     handle({ type: 'start', reduced: false })
     handle({ type: 'start', reduced: false }) // double-start (e.g. rapid toggle during chunk load)
     expect(h.rec.frames.length).toBe(1) // exactly one loop, not two drawing 2×/frame
@@ -200,15 +249,15 @@ describe('marble worker handler', () => {
     expect(h.rec.frames.length).toBe(0) // GPU-less machines pay nothing, not a 60Hz no-op timer
   })
 
+  it('start with reduced-motion paints ONE static frame and never spins the rAF loop', () => {
+    const { h, handle, gl } = initedHandler()
+    handle({ type: 'start', reduced: true })
+    // prefers-reduced-motion: one frame drawn, but no requestFrame scheduled (never a running animation)
+    expect([gl.calls.includes('draw'), h.rec.frames.length]).toEqual([true, 0])
+  })
+
   it('on webglcontextlost the worker stops the loop and asks the main thread to fall back', () => {
-    const h = host()
-    const handle = createMarbleWorkerHandler(h)
-    const listeners: Record<string, (e: { preventDefault: () => void }) => void> = {}
-    const canvas = {
-      getContext: () => fakeGl(),
-      addEventListener: (t: string, cb: (e: { preventDefault: () => void }) => void) => (listeners[t] = cb),
-    } as unknown as OffscreenCanvas
-    handle({ type: 'init', canvas, w: 8, h: 8, accent: [1, 0, 0], base: [0, 0, 0] })
+    const { h, handle, listeners } = initedWithListeners()
     handle({ type: 'start', reduced: false }) // running; raf id 1 pending
     let prevented = false
     listeners['webglcontextlost']!({ preventDefault: () => (prevented = true) })
@@ -216,10 +265,15 @@ describe('marble worker handler', () => {
     expect([prevented, h.rec.cancelled, h.rec.fallbacks]).toEqual([true, [1], 1])
   })
 
+  it('a context lost BEFORE the loop starts falls back without cancelling a never-scheduled frame', () => {
+    const { h, listeners } = initedWithListeners()
+    // no 'start' → raf is still 0 when the context is lost; the `if (raf)` guard must skip cancelFrame(0)
+    listeners['webglcontextlost']!({ preventDefault: () => {} })
+    expect([h.rec.cancelled, h.rec.fallbacks]).toEqual([[], 1])
+  })
+
   it('stop halts the loop and cancels the pending frame', () => {
-    const h = host()
-    const handle = createMarbleWorkerHandler(h)
-    handle(initMsg(() => fakeGl()))
+    const { h, handle } = initedHandler()
     handle({ type: 'start', reduced: false }) // raf id 1 is now pending
     handle({ type: 'stop' })
     // the pending frame was cancelled, and re-running the loop callback draws nothing more
@@ -228,22 +282,39 @@ describe('marble worker handler', () => {
     expect([h.rec.cancelled, h.rec.frames.length]).toEqual([[1], framesAfterStop])
   })
 
+  it('stop while already paused cancels no frame — the raf guard skips cancelFrame(0)', () => {
+    const { h, handle } = initedHandler() // inited but never started → raf is 0
+    handle({ type: 'stop' })
+    expect(h.rec.cancelled).toEqual([]) // without `if (raf)` this would record a spurious cancelFrame(0)
+  })
+
   it('recolor repaints once while paused, without starting the loop', () => {
-    const h = host()
-    const handle = createMarbleWorkerHandler(h)
-    let gl: ReturnType<typeof fakeGl> | undefined
-    handle(initMsg(() => (gl = fakeGl()))) // init alone does not draw
+    const { h, handle, gl } = initedHandler() // init alone does not draw
     handle({ type: 'recolor', accent: [0, 0, 1], base: [0.1, 0.1, 0.1] })
-    expect([gl!.calls.includes('draw'), h.rec.frames.length]).toEqual([true, 0])
+    // ...and the repaint fed the shader the NEW hues (init was [1,0,0]/[0,0,0]) — a dropped recolor
+    // colour assignment would still draw, but with the stale init colours, so pin the uniforms too.
+    expect([gl.calls.includes('draw'), h.rec.frames.length, gl.uni['uAccent'], gl.uni['uBase']]).toEqual([
+      true,
+      0,
+      [0, 0, 1],
+      [0.1, 0.1, 0.1],
+    ])
   })
 
   it('resize adopts the new device-px size and repaints it while paused', () => {
-    const h = host()
-    const handle = createMarbleWorkerHandler(h)
-    let gl: ReturnType<typeof fakeGl> | undefined
-    handle(initMsg(() => (gl = fakeGl()))) // inits at 8×8
+    const { h, handle, gl } = initedHandler() // inits at 8×8
     handle({ type: 'resize', w: 500, h: 300 })
     // the repaint sized the drawing buffer to the new dimensions
-    expect([gl!.canvas.width, gl!.canvas.height, h.rec.frames.length]).toEqual([500, 300, 0])
+    expect([gl.canvas.width, gl.canvas.height, h.rec.frames.length]).toEqual([500, 300, 0])
+  })
+
+  it('recolor / resize while the loop is running do NOT force a synchronous repaint (the loop owns redraws)', () => {
+    const { handle, gl } = initedHandler() // inits at 8×8
+    handle({ type: 'start', reduced: false }) // running → the loop drew exactly one frame at 8×8
+    const drawsAfterStart = gl.calls.filter((c) => c === 'draw').length
+    handle({ type: 'recolor', accent: [0, 0, 1], base: [0.1, 0.1, 0.1] }) // running → `if (!running) draw()` skips
+    handle({ type: 'resize', w: 500, h: 300 }) // running → resize is stored, buffer NOT resized until next frame
+    // no extra draw fired, and the drawing buffer is still 8×8 (the running loop adopts 500 next frame)
+    expect([gl.calls.filter((c) => c === 'draw').length, gl.canvas.width]).toEqual([drawsAfterStart, 8])
   })
 })

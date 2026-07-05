@@ -160,7 +160,7 @@ describe('multi-build: parse carries all axes + convertVariant', () => {
     const lite = convertVariant(multi, { specIndex: 1, skillSetId: '2', itemSetId: '2', name: 'lite' })
 
     expect(lite.stats.passiveCount).toBeLessThan(full.stats.passiveCount) // alt spec is tiny
-    expect(lite.stats.skillCount).toBeLessThanOrEqual(full.stats.skillCount) // alt set ≤ groups
+    expect(lite.stats.skillCount).toBeLessThan(full.stats.skillCount) // 1-group alt set < the full groups
     expect(lite.stats.itemCount).toBe(0) // empty item set
     expect(lite.build.name).toBe('lite')
     // the full variant still equals the active build's tree

@@ -80,5 +80,8 @@ describe('itemIcons.json shape', () => {
 
   it('exports a bundled atlas asset URL (zero network at runtime)', () => {
     expect(itemIconsAtlasUrl).toMatch(/icons\.webp/)
+    // …the BASE atlas specifically — /icons\.webp/ alone also matches 'unique-icons.webp', so a swap
+    // to the unique atlas (base rects painted over unique art) would slip through without this
+    expect(itemIconsAtlasUrl).not.toMatch(/unique-icons\.webp/)
   })
 })

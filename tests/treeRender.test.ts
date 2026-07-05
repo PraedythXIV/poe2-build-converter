@@ -21,9 +21,11 @@ import type { MountTreeOptions, TreeView } from '../src/tree/index'
 import type { RawTreeGraph, TreeGraph } from '../src/tree/graph'
 import { loadGraph } from '../src/tree/graph'
 import type { JewelInfo } from '../src/tree/render'
+import { resolvePalette } from '../src/tree/render'
 import { fitToBounds, worldToScreen } from '../src/tree/viewport'
 import { mountAtlasTree, atlasGraph } from '../src/atlas/index'
 import { parsePob } from '../src/convert/parsePob'
+import { ctxCalls, startCtxRecording, stopCtxRecording, clearCtxCalls } from './helpers/canvas2d'
 
 const SAMPLE_XML = readFileSync(join(process.cwd(), 'tests', 'fixtures', 'pob2-build.xml'), 'utf8')
 const SIZE = { width: 900, height: 600 }
@@ -58,6 +60,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  stopCtxRecording() // never let ctx recording leak into the next test/file
   harness.restore()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
@@ -438,6 +441,354 @@ describe('index.ts draw loop — pan, wheel zoom, toggle, fit, subscribe', () =>
     expect(flush()).toBeGreaterThan(0)
 
     unsub()
+    cleanup()
+  })
+})
+
+/** Build a minimal start→node-2 graph (node 2 carries `extra`), mount it, allocate both nodes, hover
+ *  node 2, and hand back the resulting tooltip element + cleanup. Shared by the single-node tooltip
+ *  tests so their identical mount / allocate / hover scaffolding lives in exactly one place. */
+function mountHoverNode2(extra: Record<string, unknown>): { tip: HTMLElement; cleanup: () => void } {
+  const graph = buildGraph(
+    rawGraph({ '1': rn(400, 750, { name: 'Start', classStartIndex: [0] }), '2': rn(900, 750, extra) }, [
+      { from: 1, to: 2 },
+    ]),
+  )
+  const { view, container, cleanup } = mount({ graph })
+  view.setBuild({ allocated: ['1', '2'], classIndex: 0 })
+  flush()
+  const s2 = screenOf(graph, '2')
+  ptr(canvasOf(container), 'pointermove', s2.sx, s2.sy)
+  flush()
+  return { tip: tipOf(container), cleanup }
+}
+
+describe('tree/index tooltip — attribute-of-choice tag', () => {
+  it('names the chosen attribute when the pick is recorded, else shows the bare "of choice" label', () => {
+    const graph = buildGraph(fullLodRaw())
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({ allocated: ['1', '2', '6'], classIndex: 0, attributeChoices: new Map([['6', 'Strength']]) })
+    flush()
+
+    const c6 = screenOf(graph, '6')
+    ptr(canvasOf(container), 'pointermove', c6.sx, c6.sy)
+    flush()
+    const setTag = tipOf(container).querySelector('[data-tag="attr-choice"]')
+    expect(setTag).not.toBeNull()
+    expect(setTag!.textContent).toContain('Strength') // copy.tree.attrChoiceSet
+
+    // move off (unfreezes the tip), drop the recorded pick, re-hover 6 → the bare label
+    const c2 = screenOf(graph, '2')
+    ptr(canvasOf(container), 'pointermove', c2.sx, c2.sy)
+    flush()
+    view.setBuild({ allocated: ['1', '2', '6'], classIndex: 0 }) // no attributeChoices
+    flush()
+    ptr(canvasOf(container), 'pointermove', c6.sx, c6.sy)
+    flush()
+    const bareTag = tipOf(container).querySelector('[data-tag="attr-choice"]')
+    expect(bareTag).not.toBeNull()
+    expect(bareTag!.textContent).toContain('Attribute of choice')
+    expect(bareTag!.textContent).not.toContain('set to')
+    cleanup()
+  })
+})
+
+describe('tree/index tooltip — fixed attribute-grant tag', () => {
+  it('labels a granted-attribute node with the exact attribute(s) it grants', () => {
+    const graph = buildGraph(
+      rawGraph(
+        {
+          '1': rn(300, 750, { name: 'Start', classStartIndex: [0] }),
+          '2': rn(700, 750, { name: 'StrDex', grantedStrength: 5, grantedDexterity: 5, stats: ['+5 Str/Dex'] }),
+          '3': rn(1100, 750, { name: 'IntNode', grantedIntelligence: 5, stats: ['+5 Int'] }),
+        },
+        [
+          { from: 1, to: 2 },
+          { from: 2, to: 3 },
+        ],
+      ),
+    )
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({ allocated: ['1', '2', '3'], classIndex: 0 })
+    flush()
+
+    const s2 = screenOf(graph, '2')
+    ptr(canvasOf(container), 'pointermove', s2.sx, s2.sy)
+    flush()
+    const grantTag = tipOf(container).querySelector('[data-tag="attr-grant"]')
+    expect(grantTag).not.toBeNull()
+    expect(grantTag!.textContent).toContain('Strength / Dexterity') // both, joined — copy.tree.grantsAttr
+
+    const s3 = screenOf(graph, '3')
+    ptr(canvasOf(container), 'pointermove', s3.sx, s3.sy)
+    flush()
+    const intTag = tipOf(container).querySelector('[data-tag="attr-grant"]')
+    expect(intTag).not.toBeNull()
+    expect(intTag!.textContent).toContain('Intelligence')
+    cleanup()
+  })
+})
+
+describe('tree/index tooltip — Weapon Master conversion cue', () => {
+  it('flags a node that converts passive points into weapon-set skill points', () => {
+    const graph = buildGraph(fullLodRaw())
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({ allocated: ['1', '2', '8'], classIndex: 0 }) // node 8 = weaponPassivePointsGranted
+    flush()
+    const s8 = screenOf(graph, '8')
+    ptr(canvasOf(container), 'pointermove', s8.sx, s8.sy)
+    flush()
+    const tag = tipOf(container).querySelector('[data-tag="weapon-points"]')
+    expect(tag).not.toBeNull()
+    expect(tag!.textContent).toContain('Weapon Set') // copy.tree.convertsToWeaponPoints
+    cleanup()
+  })
+})
+
+describe('tree/index tooltip — jewel card with no base / radius / stats', () => {
+  it('renders only the name for a bare socketed jewel (no base, radius subline, stamp, or mod rows)', () => {
+    const graph = buildGraph(fullLodRaw())
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({
+      allocated: ['1', '2', '3', '4', '5'],
+      classIndex: 0,
+      jewels: new Map([['5', { name: 'Bare', stats: [] }]]),
+    })
+    flush()
+    const s5 = screenOf(graph, '5')
+    ptr(canvasOf(container), 'pointermove', s5.sx, s5.sy)
+    flush()
+    const tip = tipOf(container)
+    expect(tip.querySelector('.itc-card--featured')).not.toBeNull() // took the jewel-card path
+    expect(tip.querySelector('.itc-name')?.textContent).toBe('Bare')
+    expect(tip.querySelector('.itc-base')).toBeNull() // no baseType
+    expect(tip.querySelector('.itc-subline')).toBeNull() // jewel-card subline = radius, absent
+    expect(tip.querySelector('.itc-stamp')).toBeNull() // not corrupted
+    expect(tip.querySelector('.itc-mod')).toBeNull() // empty stats → no mod rows
+    cleanup()
+  })
+})
+
+describe('tree/index tooltip — unnamed node fallback', () => {
+  it('omits the name span but still shows the kind subline for an unnamed node', () => {
+    const { tip, cleanup } = mountHoverNode2({ name: '' }) // an unnamed tree-start-style node
+    expect(tip.hidden).toBe(false)
+    expect(tip.querySelector('.itc-name')).toBeNull() // empty name → no itc-name span (line 672)
+    expect((tip.querySelector('.itc-subline')?.textContent ?? '').length).toBeGreaterThan(0) // kind label
+    cleanup()
+  })
+})
+
+describe('tree/index tooltip — granted skill without a description', () => {
+  it('shows the grants tag but no description row when the granted skill carries no desc', () => {
+    const { tip, cleanup } = mountHoverNode2({ name: 'Skiller', grantedSkill: { name: 'Spark' } }) // no desc
+    const grants = tip.querySelector('[data-tag="grants"]')
+    expect(grants).not.toBeNull()
+    expect(grants!.textContent).toContain('Spark') // copy.tree.grantsSkill
+    expect(tip.querySelector('.itc-desc')).toBeNull() // no desc → no trailing itc-desc row (line 613 guard)
+    cleanup()
+  })
+})
+
+describe('tree/index search — reframe, no-match, and Time-Lost swap match', () => {
+  it('draws highlight rings only when a term matches, finding the swapped attribute too', () => {
+    const graph = buildGraph(
+      rawGraph(
+        {
+          '1': rn(400, 750, { name: 'Start', classStartIndex: [0] }),
+          '2': rn(900, 750, { name: 'Findme Alpha', stats: ['+10 to Strength'] }),
+          '3': rn(1300, 750, { name: 'Findme Beta', stats: [] }),
+          '4': rn(950, 760, { name: 'Socket', jewel: true }), // Time-Lost socket next to node 2
+        },
+        [
+          { from: 1, to: 2 },
+          { from: 2, to: 3 },
+        ],
+      ),
+    )
+    const searchColor = resolvePalette(document.createElement('div')).search
+    const searchStroked = (): boolean => ctxCalls.some((c) => c.name === 'stroke' && c.strokeStyle === searchColor)
+
+    const { view, cleanup } = mount({ graph })
+    view.setBuild({
+      allocated: ['1', '2', '3'],
+      classIndex: 0,
+      // a Time-Lost Diamond at node 4; its disc radius covers node 2 → Strength becomes Dexterity
+      jewels: new Map([
+        [
+          '4',
+          {
+            name: 'TL',
+            stats: [],
+            ring: { frameA: 'a', frameB: 'b', diameter: 400 },
+            swap: { from: 'Strength', to: 'Dexterity' },
+          },
+        ],
+      ]),
+    })
+    flush()
+
+    // no match → searchMatches empty → no reframe, no highlight rings
+    startCtxRecording()
+    view.focusSearch('zzz-nothing')
+    flush()
+    expect(searchStroked()).toBe(false)
+
+    // a term matching 2 node NAMES → reframe over the matches (matchBounds, lines 1059-1062) + rings
+    clearCtxCalls()
+    view.focusSearch('Findme')
+    flush()
+    expect(searchStroked()).toBe(true)
+
+    // the swap makes node 2's "+10 to Strength" findable as "Dexterity" (focusSearch line 963)
+    clearCtxCalls()
+    view.focusSearch('Dexterity')
+    flush()
+    expect(searchStroked()).toBe(true)
+    cleanup()
+  })
+})
+
+describe('render — resolvePalette reads a set CSS token (not the fallback)', () => {
+  it('returns the element token value when the custom property is set', () => {
+    const el = document.createElement('div')
+    el.style.setProperty('--poe-node-off', '#123456')
+    el.style.setProperty('--poe-node-on', '#abcdef')
+    document.body.appendChild(el)
+    const pal = resolvePalette(el)
+    expect(pal.edgeIdle).toBe('#123456') // cssVar `v.length > 0` branch (line 683)
+    expect(pal.dotIdle).toBe('#123456')
+    expect(pal.edgeAllocated).toBe('#abcdef')
+    el.remove()
+  })
+})
+
+describe('render — full-LOD frame keys for hovered UNALLOCATED nodes', () => {
+  it('hovers an unallocated keystone / small / jewel at full LOD (CanAllocate frame arm)', () => {
+    const graph = buildGraph(fullLodRaw()) // fit zoom ~0.52 → full LOD
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({ allocated: ['1'], classIndex: 0 }) // the hover targets stay UNALLOCATED
+    flush()
+    const canvas = canvasOf(container)
+    // 4 = keystone (frameKeyFor line 842), 2 = small (line 850), 5 = jewel (line 852) — each
+    // unallocated + hovered exercises the `hovered ? 'CanAllocate'…` arm the allocated tests skip.
+    for (const id of ['4', '2', '5']) {
+      const { sx, sy } = screenOf(graph, id)
+      ptr(canvas, 'pointermove', sx, sy)
+      flush()
+      expect(canvas.style.cursor).toBe('pointer')
+      expect(tipOf(container).hidden).toBe(false)
+      expect(tipOf(container).innerHTML).toContain('itc-card')
+    }
+    cleanup()
+  })
+})
+
+describe('render — conqueror node-art path for keystone + jewel kinds in a faction radius', () => {
+  it('runs conquerorKindForNode for a keystone and a jewel inside a Vaal radius jewel', () => {
+    const graph = buildGraph(
+      rawGraph(
+        {
+          '1': rn(200, 750, { name: 'Start', classStartIndex: [0] }),
+          '2': rn(600, 750, { name: 'Path', stats: ['+10 Life'] }),
+          '4': rn(1000, 750, { name: 'Keystone In Radius', keystone: true, stats: ['Cannot use Mana'] }),
+          '9': rn(900, 850, { name: 'Jewel In Radius', jewel: true }),
+          '5': rn(1800, 750, { name: 'Vaal Socket', jewel: true }),
+        },
+        [
+          { from: 1, to: 2 },
+          { from: 2, to: 4 },
+        ],
+      ),
+    )
+    const { view, container, cleanup } = mount({ graph })
+    // Vaal annulus 600..1200 from node 5 covers keystone 4 (dist 800) and jewel 9 (dist ~905).
+    view.setBuild({
+      allocated: ['1', '2', '4'],
+      classIndex: 0,
+      jewels: new Map([
+        [
+          '5',
+          {
+            name: 'TL',
+            stats: ['Nearby Passives are Conquered by the Vaal'],
+            version: 'Vaal',
+            ring: { frameA: 'a', frameB: 'b', diameter: 2400, innerDiameter: 1200 },
+          },
+        ],
+      ]),
+    })
+    expect(flush()).toBeGreaterThan(0) // draw ran → conquerorRectFor called for keystone 4 + jewel 9
+
+    // the keystone's tooltip conqueror cue confirms it sits inside the Vaal radius (same geometry the
+    // renderer used to drive the keystone/jewel conqueror-art arms).
+    const s4 = screenOf(graph, '4')
+    ptr(canvasOf(container), 'pointermove', s4.sx, s4.sy)
+    flush()
+    const tag = tipOf(container).querySelector('[data-tag="conqueror"]')
+    expect(tag).not.toBeNull()
+    expect(tag!.textContent).toContain('Vaal')
+    cleanup()
+  })
+})
+
+describe('render — mastery glow rays drawn UNLIT', () => {
+  it('draws the dim (unlit) mastery effect at alpha 0.42 when no connected notable is allocated', () => {
+    const { view, cleanup } = mount({ centralArt: true }) // real character tree loads the mastery sheet
+    view.setBuild({ allocated: [], classIndex: 2 }) // nothing allocated → every glow is unlit
+    flush()
+
+    startCtxRecording()
+    view.redraw()
+    flush()
+    // unlit arm (render.ts lines 1020/1022 + globalAlpha 0.42 at line 1026)
+    expect(ctxCalls.some((c) => c.name === 'drawImage' && c.globalAlpha === 0.42)).toBe(true)
+    // never the lit (0.8) alpha, since no notable is allocated — guards against an inverted lit check
+    expect(ctxCalls.some((c) => c.name === 'drawImage' && c.globalAlpha === 0.8)).toBe(false)
+    cleanup()
+  })
+})
+
+describe('render — icons-LOD fallback dot for jewel nodes (no sprite, no frame)', () => {
+  it('fills a token dot per jewel with the state-correct colour when nothing resolves', () => {
+    const pal = resolvePalette(document.createElement('div'))
+    // Wide bounds → fit zoom ~0.10 → the 'icons' LOD, where a jewel draws no sprite AND (not full LOD)
+    // no frame, so it falls through to the token dot (render.ts lines 1294-1307).
+    const graph = buildGraph(
+      rawGraph(
+        {
+          '1': rn(0, 2500, { name: 'Start', classStartIndex: [0] }),
+          j0: rn(1500, 2500, { name: 'J0', jewel: true }), // idle
+          j1: rn(3000, 2500, { name: 'J1', jewel: true }), // allocated, no weapon set
+          j2: rn(5000, 2500, { name: 'J2', jewel: true }), // allocated, set 1
+          j3: rn(7000, 2500, { name: 'J3', jewel: true }), // allocated, set 2
+          j4: rn(8000, 2500, { name: 'J4', jewel: true }), // hovered
+        },
+        [],
+      ),
+    )
+    const { view, container, cleanup } = mount({ graph })
+    view.setBuild({
+      allocated: ['1', 'j1', 'j2', 'j3'], // setBuild allocates ids directly (no BFS auto-path)
+      classIndex: 0,
+      weaponSet1: ['j2'],
+      weaponSet2: ['j3'],
+    })
+    flush()
+    // hover the idle jewel j4 → its fallback dot takes the hover colour
+    const s4 = screenOf(graph, 'j4')
+    ptr(canvasOf(container), 'pointermove', s4.sx, s4.sy)
+    flush()
+
+    startCtxRecording()
+    view.redraw()
+    flush()
+    const dotColors = ctxCalls.filter((c) => c.name === 'fill').map((c) => c.fillStyle)
+    expect(dotColors).toContain(pal.dotIdle) // j0 idle (line 1304, dotIdle arm)
+    expect(dotColors).toContain(pal.dotAllocated) // j1 allocated, no set (lines 1299/1301 else)
+    expect(dotColors).toContain(pal.ws1) // j2 in set 1 (line 1299)
+    expect(dotColors).toContain(pal.ws2) // j3 in set 2 (line 1301)
+    expect(dotColors).toContain(pal.hover) // j4 hovered (line 1304, hover arm)
     cleanup()
   })
 })

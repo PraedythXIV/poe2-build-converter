@@ -6,6 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { mountAtlasMasters, allocatedMasterStats, MASTER_ACCENT, type MastersApi } from '../src/atlas/masters'
 import mastersData from '../src/data/atlasMasters.json'
 import iconData from '../src/data/atlasMasterIcons.json'
+import { copy } from '../src/copy'
 
 interface Keystone {
   id: string
@@ -168,7 +169,7 @@ describe('mountAtlasMasters rule enforcement', () => {
     let seen: Record<string, string[]> | null = null
     api.subscribe((s) => (seen = s))
     cells()[0]!.click()
-    expect(seen).not.toBeNull()
+    expect(seen).toEqual(api.getState()) // the listener received the NEW state snapshot, not undefined
     expect(api.total()).toBe(1)
   })
 
@@ -209,5 +210,42 @@ describe('mountAtlasMasters rule enforcement', () => {
     const tip = document.querySelector('.am-tip') as HTMLElement
     expect(tip.querySelector('.am-tip-empty')).not.toBeNull()
     expect(tip.querySelectorAll('.am-tip-stats li').length).toBe(0)
+  })
+
+  it('re-anchors the open tooltip after a toggle rebuilds the grid, refreshing its allocate/remove hint', () => {
+    mount()
+    cells()[0]!.dispatchEvent(new Event('mouseenter')) // hover an unallocated keystone → tooltip opens
+    const tip = document.querySelector('.am-tip') as HTMLElement
+    expect(tip.querySelector('.am-tip-hint')!.textContent).toBe(copy.atlas.clickToAllocate)
+    cells()[0]!.click() // allocate → render() rebuilds the grid AND re-anchors the still-open tip
+    expect(tip.hidden).toBe(false) // tooltip stayed open through the rebuild
+    expect(tip.querySelector('.am-tip-hint')!.textContent).toBe(copy.atlas.clickToRemove) // re-rendered with on=true
+  })
+
+  it('hides the tooltip when the pointer leaves a keystone', () => {
+    mount()
+    cells()[0]!.dispatchEvent(new Event('mouseenter'))
+    const tip = document.querySelector('.am-tip') as HTMLElement
+    expect(tip.hidden).toBe(false)
+    cells()[0]!.dispatchEvent(new Event('mouseleave')) // hideTip → tip hidden + hover cleared
+    expect(tip.hidden).toBe(true)
+  })
+
+  it('Escape on the open drawer dismisses it', () => {
+    mount()
+    const drawer = document.getElementById('d') as HTMLElement
+    const toggle = document.getElementById('t') as HTMLElement
+    toggle.click() // open
+    expect(drawer.classList.contains('is-open')).toBe(true)
+    drawer.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(drawer.classList.contains('is-open')).toBe(false)
+    expect(drawer.hasAttribute('inert')).toBe(true) // closed → its buttons leave the tab order
+  })
+
+  it('mounts into a detached drawer (no positioned parent), anchoring the tooltip to the drawer itself', () => {
+    const drawer = document.createElement('aside') // never attached → parentElement is null
+    const toggle = document.createElement('button')
+    expect(() => mountAtlasMasters(drawer, toggle)).not.toThrow() // stage falls back to the drawer
+    expect(drawer.querySelector('.am-tip')).not.toBeNull() // the tip was appended to the drawer
   })
 })

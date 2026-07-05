@@ -6,10 +6,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { encodeAtlasPlan } from '../src/atlas/share'
 import { atlasGraph } from '../src/atlas/index'
-
-const ROOT = process.cwd()
-const SAMPLE_XML = readFileSync(join(ROOT, 'tests', 'fixtures', 'pob2-build.xml'), 'utf8')
-const LOADOUTS_XML = readFileSync(join(ROOT, 'tests', 'fixtures', 'pob-loadouts.xml'), 'utf8')
+import { ROOT, SAMPLE_XML, LOADOUTS_XML, mountIndexBody } from './helpers/bootHarness'
 
 // Two real NON-start atlas node ids — encoded into the boot hash below so the '#atlas=…'
 // load path runs against the real graph. Start nodes are default-on + uncounted, so a
@@ -18,16 +15,19 @@ const ATLAS_BOOT_IDS = Object.keys(atlasGraph.nodes)
   .filter((k) => atlasGraph.nodes[k]?.atlasRoot !== true)
   .slice(0, 2)
 
-function bodyInnerHtml(html: string): string {
-  const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-  const inner = m ? m[1]! : html
-  return inner.replace(/<script[\s\S]*?<\/script>/gi, '') // we import main.ts manually
+/** Paste an undecodable string and await the live decode-error note; returns the [code, note] elements. */
+async function pasteInvalidAndAwaitDecodeError(): Promise<[HTMLTextAreaElement, HTMLElement]> {
+  const code = document.getElementById('code') as HTMLTextAreaElement
+  const note = document.getElementById('import-note') as HTMLElement
+  code.value = 'not a real code'
+  code.dispatchEvent(new Event('input', { bubbles: true }))
+  await vi.waitFor(() => expect(note.textContent?.toLowerCase()).toMatch(/base64|code|xml/), { timeout: 3000 })
+  return [code, note]
 }
 
 describe('UI wiring', () => {
   beforeAll(async () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8')
-    document.body.innerHTML = bodyInnerHtml(html)
+    mountIndexBody()
     // main.ts reads location.hash at module eval (the atlas load-on-boot path), so the
     // shared boot sets a real share hash BEFORE the dynamic import — no exported helper
     // needed, the genuine boot-order code runs.
@@ -325,16 +325,7 @@ describe('UI wiring', () => {
   // invalid paste feedback: a code that fails decode/parse surfaces the tailored error on the
   // Import step's own note (live, before Convert is ever pressed) and clears once input is fixed
   it('shows the decode error live for an invalid paste and clears it when fixed', async () => {
-    const code = document.getElementById('code') as HTMLTextAreaElement
-    const note = document.getElementById('import-note') as HTMLElement
-    code.value = 'not a real code'
-    code.dispatchEvent(new Event('input', { bubbles: true }))
-    // 250 ms preview debounce — poll for the decode error itself (the note may still hold the
-    // PREVIOUS test's import warning until the debounce replaces it, so "non-empty" won't do)
-    await vi.waitFor(() => expect(note.textContent?.toLowerCase()).toMatch(/base64|code|xml/), {
-      timeout: 3000,
-    })
-
+    const [code, note] = await pasteInvalidAndAwaitDecodeError()
     code.value = SAMPLE_XML
     code.dispatchEvent(new Event('input', { bubbles: true }))
     await vi.waitFor(() => expect(note.textContent).toBe(''), { timeout: 3000 })
@@ -458,5 +449,116 @@ describe('UI wiring', () => {
     sel.dispatchEvent(new Event('change', { bubbles: true }))
     expect((document.getElementById('bc-stats-note') as HTMLElement).hidden).toBe(false)
     expect((document.getElementById('tree-loadout') as HTMLSelectElement).value).toBe('1')
+  })
+
+  // ── no-ascendancy / no-level build: the else-arms of the class/level display + class-only splash ──
+  it('a build with no ascendancy and no level renders bare class, a "?" level, and a class-only splash', async () => {
+    const NOASC_XML = readFileSync(join(ROOT, 'tests', 'fixtures', 'pob-noasc.xml'), 'utf8')
+    const code = document.getElementById('code') as HTMLTextAreaElement
+    code.value = NOASC_XML
+    ;(document.getElementById('convert') as HTMLButtonElement).click()
+
+    // renderResult stat strip: Class shows the BARE className (no " · asc"); Level shows "?"
+    const statText = (label: string): string | undefined =>
+      [...document.querySelectorAll('#stats .stat')].map((s) => s.textContent ?? '').find((t) => t.startsWith(label))
+    expect(statText('Class')).toBe('Class Warrior') // 562 — s.ascendancy falsy → bare className
+    expect(statText('Level')).toBe('Level ?') // 563 — s.level == null → "?"
+
+    // renderContents identity line: class span present, NO ascendancy span, NO level span
+    expect(document.querySelector('#bc-char .bc-cls')?.textContent).toBe('Warrior')
+    expect(document.querySelector('#bc-char .bc-asc')).toBeNull() // 1177 — no ascendancy pushed
+    expect(document.querySelector('#bc-char .bc-lv')).toBeNull() // 1178 — no level pushed
+
+    // syncTree resets the tree's ascendancy (setBuild passes ascendancyId=null), so 1008 takes its ELSE
+    // arm classIndexForName(pob.className); the splash re-renders class-only. Wait on the PRIOR test's
+    // ascendancy segment CLEARING (a real sync point — the prior build was also a "Warrior", so the
+    // class-name alone can't tell the renders apart).
+    await vi.waitFor(() => expect(document.querySelector('#asc-splash .asc-splash-asc')).toBeNull(), {
+      timeout: 3000,
+    })
+    expect(document.querySelector('#asc-splash .asc-splash-cls')?.textContent).toBe('Warrior') // 1008 — class-only
+  })
+
+  // ── pobb.in import: a NON-BffError from the fetch surfaces the generic "Unexpected error." arm ──
+  it('a non-BffError during a pobb.in import shows the generic unexpected-error detail', async () => {
+    // an OK response whose .text() rejects with a PLAIN Error (not a BffError) — importFromPobbin's
+    // catch must take the `: copy.convert.pobbinUnexpected` arm, never leaking the raw Error message.
+    vi.stubGlobal('fetch', () =>
+      Promise.resolve({ ok: true, status: 200, text: () => Promise.reject(new Error('boom')) }),
+    )
+    try {
+      const code = document.getElementById('code') as HTMLTextAreaElement
+      code.value = 'https://pobb.in/NonBff01'
+      code.dispatchEvent(new Event('input', { bubbles: true }))
+      const note = document.getElementById('import-note') as HTMLElement
+      await vi.waitFor(() => expect(note.textContent).toContain('Unexpected error.'), { timeout: 3000 })
+      expect(note.textContent).not.toContain('boom') // the raw Error message is NOT surfaced
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  // ── pobb.in import: an edit mid-fetch aborts the write (never clobbers the user's input) ──
+  it('editing the textarea while a pobb.in fetch is in flight aborts the raw-code write', async () => {
+    let resolveFetch: (v: unknown) => void = () => {}
+    const deferred = new Promise((r) => (resolveFetch = r))
+    vi.stubGlobal('fetch', () => deferred) // one shared pending promise, resolved manually below
+    try {
+      const code = document.getElementById('code') as HTMLTextAreaElement
+      const note = document.getElementById('import-note') as HTMLElement
+      code.value = 'https://pobb.in/MidEdit01'
+      code.dispatchEvent(new Event('input', { bubbles: true }))
+      // wait until importFromPobbin has STARTED — it sets "Fetching…" before awaiting the fetch,
+      // capturing the current textarea value as its snapshot
+      await vi.waitFor(() => expect(note.textContent).toContain('Fetching'), { timeout: 2000 })
+      // the user edits the textarea, THEN the in-flight fetch resolves with the raw code
+      code.value = 'USER EDITED THIS'
+      let bodyRead = false
+      resolveFetch({
+        ok: true,
+        status: 200,
+        text: () => {
+          bodyRead = true // observable signal that the continuation reached the body read (past the fetch await)
+          return Promise.resolve(SAMPLE_XML)
+        },
+      })
+      // deterministic wait (no arbitrary sleep): once the body is read the continuation is one microtask
+      // from the snapshot check + (aborted) write — wait on that signal, then flush the remaining ticks
+      await vi.waitFor(() => expect(bodyRead).toBe(true))
+      await Promise.resolve()
+      await Promise.resolve()
+      expect(code.value).toBe('USER EDITED THIS') // value !== snapshot → the raw code was NOT written
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  // ── pobb.in import: a link changed during the debounce window is NOT fetched (stale-id guard) ──
+  it('a pobb.in link changed during the debounce is not fetched (stale-id guard)', async () => {
+    const fetchSpy = vi.fn(() =>
+      Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(SAMPLE_XML) }),
+    )
+    vi.stubGlobal('fetch', fetchSpy)
+    try {
+      const code = document.getElementById('code') as HTMLTextAreaElement
+      code.value = 'https://pobb.in/StaleAAAA'
+      code.dispatchEvent(new Event('input', { bubbles: true })) // arms the 350ms timer for id "StaleAAAA"
+      // change the link WITHOUT re-firing input, so the armed timer still targets the OLD id
+      code.value = 'https://pobb.in/FreshBBBB'
+      await new Promise((r) => setTimeout(r, 600)) // let the single armed timer fire
+      expect(fetchSpy).not.toHaveBeenCalled() // pobbinId(current) !== armed id → import skipped
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  // ── live preview: an invalid paste shows a decode error; CLEARING to empty removes it (updateContents 928) ──
+  it('clearing an invalid paste to empty input removes the decode-error note', async () => {
+    const [code, note] = await pasteInvalidAndAwaitDecodeError()
+    // clearing to EMPTY (still no valid build, but showError=false) takes the `else if (importErrorShown)`
+    // arm and drops OUR error note — distinct from the bad→valid transition (line 939) ui.test already covers
+    code.value = ''
+    code.dispatchEvent(new Event('input', { bubbles: true }))
+    await vi.waitFor(() => expect(note.textContent).toBe(''), { timeout: 3000 })
   })
 })

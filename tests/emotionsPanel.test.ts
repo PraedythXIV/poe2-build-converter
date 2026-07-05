@@ -90,9 +90,13 @@ describe('mountEmotions — shell + sub-navigation', () => {
   it('is idempotent per element — a second mount does not re-render a second shell', () => {
     const c = mount()
     expect(c.dataset.emMounted).toBe('1')
-    mountEmotions(c) // second call bails on the mounted flag
+    const wrap = c.querySelector('.em-wrap') // capture the live shell node before re-mounting
+    mountEmotions(c) // second call must bail on the mounted flag, not rebuild
     expect(c.querySelectorAll('.em-wrap')).toHaveLength(1)
     expect(c.querySelectorAll('.em-subtab')).toHaveLength(3)
+    // the SAME node survives — dropping the guard (container.innerHTML = shell()) would swap in a
+    // fresh element, so node identity is what actually proves the second mount was a no-op.
+    expect(c.querySelector('.em-wrap')).toBe(wrap)
   })
 
   it('clicking a sub-tab swaps the visible view and moves aria-selected', () => {
@@ -314,6 +318,19 @@ describe('mountEmotions — Waystone Deliriousness combiner', () => {
     // back to empty → the bonus summary is muted again
     expect($(c, '.em-way-sum-bonus').classList.contains('em-muted')).toBe(true)
   })
+
+  it('a single application of a bonus emotion prints the bonus without a ×N multiplier', () => {
+    const c = mount()
+    const ire = emotions.find((e) => e.key === 'Ire')!
+    expect(ire.waystone.bonus).toBeTruthy() // Ire carries a per-application waystone modifier
+
+    setValue($<HTMLInputElement>(c, '.em-way-n[data-key="Ire"]'), '1') // exactly one → the n > 1 false arm
+    const sumBonus = $(c, '.em-way-sum-bonus')
+    expect(sumBonus.classList.contains('em-muted')).toBe(false)
+    expect(sumBonus.textContent).toContain(ire.waystone.bonus!)
+    // a count of 1 renders the bonus bare; the "×N" tail only appears for n > 1
+    expect(sumBonus.textContent!.endsWith(ire.waystone.bonus!)).toBe(true)
+  })
 })
 
 // ── shared [data-emotion] tooltip ───────────────────────────────────────────────────────────────
@@ -348,5 +365,55 @@ describe('mountEmotions — hover/focus tooltip', () => {
 
     fire(target, 'focusout')
     expect(tip.hidden).toBe(true)
+  })
+
+  it('a Potent, bonus-less emotion tooltip shows the Potent tag, an unnamed jewel slot and no waystone bonus', () => {
+    const c = mount()
+    const tip = $(c, '.em-tip')
+    const target = $(c, '[data-emotion="Contempt"]') // Potent, waystone.bonus === null, unnamed jewel slots
+    fire(target, 'pointerover')
+
+    // Potent flag → the " · Potent" subline tag (empty string for non-Potent emotions)
+    expect($(tip, '.itc-subline').textContent).toContain(copy.emotions.tipPotent)
+    // no waystone bonus → the waystone line is just the Deliriousness%, with no " · <bonus>" tail
+    expect($(tip, '.em-tip-way').textContent).toBe('Players in Area are 50% Delirious')
+    // an unnamed jewel slot omits the name, leaving a single space after the affix label
+    const ruby = all(tip, '.em-tip-list li').find((li) => li.textContent?.startsWith('Ruby'))
+    expect(ruby).toBeTruthy()
+    expect(ruby!.textContent).toContain('prefix 0 Prefix Modifier allowed, +1 Suffix Modifier allowed')
+    expect(ruby!.textContent).not.toContain('prefix  0') // a named slot would inject a double space here
+  })
+
+  it('re-hovering the same emotion key keeps the already-built tooltip instead of rebuilding it', () => {
+    const c = mount()
+    const tip = $(c, '.em-tip')
+    const [first, second] = all(c, '[data-emotion="Ire"]') // Ire tags multiple elements (row + its icon)
+    expect(second).toBeTruthy()
+
+    fire(first!, 'pointerover')
+    expect(tip.querySelector('.itc-card')).not.toBeNull() // built once for Ire
+
+    tip.innerHTML = '<i data-sentinel="1"></i>' // if show() rebuilds for the same key, this gets wiped
+    fire(second!, 'pointerover')
+    expect(tip.querySelector('[data-sentinel]')).not.toBeNull() // current === key → no rebuild
+    expect(tip.hidden).toBe(false) // still shown
+  })
+
+  it('pointer/focus events off any emotion neither open nor close the tooltip', () => {
+    const c = mount()
+    const tip = $(c, '.em-tip')
+    const lead = $(c, '.em-lead') // a paragraph with no [data-emotion] ancestor
+    expect(lead.closest('[data-emotion]')).toBeNull()
+
+    fire(lead, 'pointerover') // armed() → null, so show() must not run
+    expect(tip.hidden).toBe(true)
+    fire(lead, 'focusin')
+    expect(tip.hidden).toBe(true)
+
+    // open a real tooltip, then a pointerout off any emotion must NOT hide it (armed() → null → hide() skipped)
+    fire($(c, '[data-emotion="Ire"]'), 'pointerover')
+    expect(tip.hidden).toBe(false)
+    fire(lead, 'pointerout')
+    expect(tip.hidden).toBe(false)
   })
 })

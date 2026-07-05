@@ -589,3 +589,135 @@ describe('economy panel — browse flow', () => {
     expect(m.app.hidden).toBe(true)
   })
 })
+
+// ── coverage top-up: edge branches lcov flagged uncovered (source is read-only; each case is DOM-driven and
+//    mutation-sensitive — the asserted value flips if the guarded line is removed or inverted) ──
+const oneRowPage = (logs: Array<{ Price: number; Time: string; Quantity: number } | null>): unknown => ({
+  CurrentPage: 1,
+  Pages: 1,
+  Total: 1,
+  Items: [{ ApiId: 'solo', Text: 'Solo', CategoryApiId: 'currency', IconUrl: null, PriceLogs: logs }],
+})
+
+describe('economy panel — edge-branch coverage', () => {
+  it('drops a stale category FAILURE so a superseded rejection cannot clobber the newer table', async () => {
+    const pending = deferred<Response>()
+    installFetch(
+      makeDispatch({
+        currency: (url) => (url.includes('category=fragments') ? pending.promise : jsonOk(CURRENCY_PAGE)),
+      }),
+    )
+    const m = await enterEconomy() // first currency category rendered (Mirror of Kalandra)
+
+    clickCat(m.side, 'currency', 'fragments') // superseded load — its fetch parks on `pending`
+    clickCat(m.side, 'currency', 'currency') // newer load wins and re-renders
+    await new Promise((resolve) => setTimeout(resolve, 0)) // let the newer load settle (loadToken advances)
+
+    pending.reject(new Error('fragments upstream died')) // the stale load now fails …
+    await new Promise((resolve) => setTimeout(resolve, 0)) // … flush its rejection through the catch
+    expect(m.main.querySelector('.es--error')).toBeNull() // the token guard dropped it — no error surface
+    expect(m.main.textContent).toContain('Mirror of Kalandra') // the newer table survived intact
+  })
+
+  it('uses the singular "1 item" pager label when exactly one priced row survives', async () => {
+    installFetch(
+      makeDispatch({
+        currency: () => jsonOk(oneRowPage([{ Price: 5, Time: '2026-06-12T00:00:00', Quantity: 1 }])),
+      }),
+    )
+    const m = await enterEconomy()
+    // total === 1 → the ternary must feed '' (not 's') into pagerInfo
+    expect(m.main.querySelector('.ec-pginfo')!.textContent).toBe(copy.economy.pagerInfo(1, 1, 1, ''))
+  })
+
+  it('reuses a successfully-mounted Exchange view on re-entry instead of re-fetching (mount latch)', async () => {
+    const exOk = (url: string): Response =>
+      url.includes('exchange-history')
+        ? jsonOk({ Data: [] })
+        : url.includes('/exchange')
+          ? jsonOk({ Epoch: 1, Volume: '1', MarketCap: '1' })
+          : jsonOk([]) // pairs + reference-currencies both want an array
+    const calls = installFetch(makeDispatch({ exchange: exOk }))
+    const exCount = (): number => calls.filter((u) => u.includes('/api/economy/exchange')).length
+    const m = mountPanel()
+
+    m.clickEnter('exchange')
+    await vi.waitFor(() => expect(m.exchange.querySelector('.ex-head')).not.toBeNull(), { timeout: 3000 })
+    const afterMount = exCount()
+    expect(afterMount).toBeGreaterThan(0) // snapshot + history fetched on first mount
+
+    m.root.querySelector<HTMLButtonElement>('.ec-viewbtn[data-ecview="browse"]')!.click()
+    await vi.waitFor(() => expect(m.exchange.hidden).toBe(true), { timeout: 3000 })
+    m.root.querySelector<HTMLButtonElement>('.ec-viewbtn[data-ecview="exchange"]')!.click()
+    await vi.waitFor(() => expect(m.exchange.hidden).toBe(false), { timeout: 3000 })
+
+    expect(exCount()).toBe(afterMount) // the latch skipped a re-mount — zero new exchange fetches
+  })
+
+  it('fits the app height on window resize only while the app is visible (the !app.hidden gate)', async () => {
+    installFetch(makeDispatch())
+    const m = mountPanel()
+
+    // app still hidden → the resize handler must skip fitAppHeight, leaving maxHeight untouched
+    window.dispatchEvent(new Event('resize'))
+    expect(m.app.style.maxHeight).toBe('')
+
+    m.clickEnter('economy')
+    await vi.waitFor(() => expect(m.main.querySelector('.ec-table')).not.toBeNull(), { timeout: 3000 })
+    m.app.style.maxHeight = '' // clear whatever enter()'s rAF set so the resize effect is unambiguous
+    window.dispatchEvent(new Event('resize'))
+    expect(m.app.style.maxHeight).toMatch(/px$/) // visible → fitAppHeight measured + sized it
+  })
+
+  it('ignores delegated clicks that miss their target button (landing / sidebar / views / pager guards)', async () => {
+    const calls = installFetch(makeDispatch())
+    const m = await enterEconomy()
+    const baseline = calls.length
+    const pagerBefore = m.main.querySelector('.ec-pginfo')!.textContent
+
+    m.side.querySelector<HTMLElement>('.ec-side-h')!.click() // group header — not a .ec-cat → no category load
+    m.root.querySelector<HTMLElement>('.ec-views .ix-seg-thumb')!.click() // seg thumb — not a .ec-viewbtn → no view
+    m.main.querySelector<HTMLElement>('tbody td')!.click() // a table cell — not a .ec-pg → no re-page
+    m.root.querySelector<HTMLButtonElement>('#ec-back')!.click() // return to the landing
+    m.landing.click() // landing backdrop — not a .ec-enter card → must not re-enter
+
+    expect(calls.length).toBe(baseline) // none of the missed clicks fired a fetch
+    expect(m.app.hidden).toBe(true) // the backdrop click never re-opened the app (312 guard held)
+    expect(m.main.querySelector('.ec-pginfo')!.textContent).toBe(pagerBefore) // pager untouched (346 guard held)
+  })
+
+  it('draws a flat sparkline without NaN when every history price is equal (the range || 1 guard)', async () => {
+    installFetch(
+      makeDispatch({
+        currency: () =>
+          jsonOk(
+            oneRowPage([
+              { Price: 50, Time: '2026-06-12T00:00:00', Quantity: 7 },
+              { Price: 50, Time: '2026-06-11T00:00:00', Quantity: 4 },
+            ]),
+          ),
+      }),
+    )
+    const m = await enterEconomy()
+    const poly = m.main.querySelector('.ec-spark polyline')
+    expect(poly).not.toBeNull() // two equal points still draw a sparkline
+    expect(poly!.getAttribute('points')).not.toContain('NaN') // range 0 → || 1 avoids the /0 that yields NaN
+  })
+
+  it('reports +0.0% change without dividing by zero when the oldest price is 0 (the first !== 0 guard)', async () => {
+    installFetch(
+      makeDispatch({
+        currency: () =>
+          jsonOk(
+            oneRowPage([
+              { Price: 12, Time: '2026-06-12T00:00:00', Quantity: 3 },
+              { Price: 0, Time: '2026-06-11T00:00:00', Quantity: 2 },
+            ]),
+          ),
+      }),
+    )
+    const m = await enterEconomy()
+    // chronological first price is 0 → the guard returns pct 0; without it (12-0)/|0| → Infinity → "+Infinity%"
+    expect(m.main.querySelector('.ec-pct')!.textContent).toBe('+0.0%')
+  })
+})

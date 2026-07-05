@@ -4,7 +4,7 @@
 // mount-level behaviour (weapon-set tints, allocation caps badge, undo/redo history,
 // seedIds-based allocation for rootless graphs like the atlas).
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { loadGraph, buildGraph, blockedNodeIds, ascendancyOverlayDelta } from '../src/tree/graph'
@@ -643,5 +643,110 @@ describe('conqueror factions are sourced from GGG AlternateTreeVersions (not han
     expect([...CONQUEROR_BY_VERSION].filter((f) => f !== 'None').sort()).toEqual(
       ['Abyss', 'Eternal', 'Kalguuran', 'Karui', 'Maraketh', 'Templar', 'Vaal'].sort(),
     )
+  })
+})
+
+describe('buildGraph — defensive edge + degenerate-bounds guards', () => {
+  it('drops an edge whose endpoint is missing from nodes (synthetic root / unknown id)', () => {
+    const raw: RawTreeGraph = {
+      bounds: { min_x: 0, min_y: 0, max_x: 100, max_y: 100 },
+      classes: [],
+      nodes: { '1': rawNode(0, 0), '2': rawNode(100, 0) },
+      edges: [
+        { from: 1, to: 2 },
+        { from: 999, to: 1 }, // 999 absent from nodes → `!na` → edge skipped, never wired
+      ],
+    }
+    const g = buildGraph(raw)
+    expect(g.edges).toHaveLength(1)
+    expect(g.adjacency.get('1')).toEqual(['2']) // no '999' neighbour crept in
+    expect(g.adjacency.has('999')).toBe(false)
+  })
+
+  it('falls back to a unit box for mainBounds when no main-tree node qualifies', () => {
+    // every node belongs to an ascendancy → the main-bounds loop filters them all → sentinels stay Infinity
+    const raw: RawTreeGraph = {
+      bounds: { min_x: 0, min_y: 0, max_x: 100, max_y: 100 },
+      classes: [],
+      nodes: { '1': rawNode(10, 20, { ascendancyId: 'X' }), '2': rawNode(30, 40, { ascendancyId: 'X' }) },
+      edges: [],
+    }
+    expect(buildGraph(raw).mainBounds).toEqual({ minX: 0, minY: 0, maxX: 1, maxY: 1 })
+  })
+})
+
+describe('blockedNodeIds / ascendancyOverlayDelta — null / unknown selections', () => {
+  it('blocks EVERY class start when no class is selected (classIndex null → ownStart null)', () => {
+    const g = loadGraph()
+    const blocked = blockedNodeIds(g, null, null)
+    expect(g.classStartIds.size).toBeGreaterThan(0)
+    for (const id of g.classStartIds) expect(blocked.has(id)).toBe(true)
+  })
+
+  it('ascendancyOverlayDelta returns null for an ascendancy id the graph does not know', () => {
+    expect(ascendancyOverlayDelta(loadGraph(), 'NoSuchAscendancy')).toBeNull()
+  })
+})
+
+describe('tree toolbar — search debounce + bg-pref persistence', () => {
+  it('debounces search to focusSearch; Enter flushes; non-Enter ignored; unwire cancels the pending timer', () => {
+    const { view, cleanup } = mountView(syntheticRawGraph())
+    const focusSpy = vi.spyOn(view, 'focusSearch').mockImplementation(() => {})
+    const bar = document.createElement('div')
+    bar.innerHTML = renderTreeToolbar()
+    const unwire = wireTreeToolbar(bar, view)
+    const search = bar.querySelector<HTMLInputElement>('.ttb-search')!
+
+    vi.useFakeTimers()
+    // two inputs in quick succession: the 2nd clears the 1st's pending timer → a single debounced flush
+    search.value = 'ab'
+    search.dispatchEvent(new Event('input', { bubbles: true }))
+    search.value = 'abc'
+    search.dispatchEvent(new Event('input', { bubbles: true }))
+    vi.advanceTimersByTime(150)
+    expect(focusSpy).toHaveBeenCalledTimes(1)
+    expect(focusSpy).toHaveBeenLastCalledWith('abc')
+
+    // a non-Enter keydown returns early — never calls focusSearch
+    focusSpy.mockClear()
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }))
+    expect(focusSpy).not.toHaveBeenCalled()
+
+    // input arms a timer, then Enter clears it and flushes immediately (no second, deferred call)
+    search.value = 'abcd'
+    search.dispatchEvent(new Event('input', { bubbles: true }))
+    search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(focusSpy).toHaveBeenCalledTimes(1)
+    expect(focusSpy).toHaveBeenLastCalledWith('abcd')
+    vi.advanceTimersByTime(150)
+    expect(focusSpy).toHaveBeenCalledTimes(1)
+
+    // a pending debounce is cancelled by unwire → the deferred flush never fires
+    focusSpy.mockClear()
+    search.value = 'zzz'
+    search.dispatchEvent(new Event('input', { bubbles: true }))
+    unwire()
+    vi.advanceTimersByTime(150)
+    expect(focusSpy).not.toHaveBeenCalled()
+
+    vi.useRealTimers()
+    cleanup()
+  })
+
+  it('reading the bg-art preference survives a throwing localStorage.getItem (defaults visible)', () => {
+    const { view, cleanup } = mountView(syntheticRawGraph())
+    const getSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('storage blocked')
+    })
+    const bgSpy = vi.spyOn(view, 'setBgVisible').mockImplementation(() => {})
+    const bar = document.createElement('div')
+    bar.innerHTML = renderTreeToolbar()
+    const unwire = wireTreeToolbar(bar, view) // must NOT throw despite getItem throwing
+    const bgInput = bar.querySelector<HTMLInputElement>('.ttb-bg-input')!
+    expect(bgInput.checked).toBe(true) // bgPref() caught the throw → true
+    expect(bgSpy).toHaveBeenCalledWith(true)
+    getSpy.mockRestore()
+    unwire()
+    cleanup()
   })
 })

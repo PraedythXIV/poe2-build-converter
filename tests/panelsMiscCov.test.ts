@@ -32,9 +32,13 @@ describe('renderNotesPanel', () => {
 
   it('turns ^N (palette) and ^xRRGGBB (hex, lowercased) codes into colour spans and escapes text', () => {
     const html = renderNotesPanel('pre ^7white <tag> & "q" ^xFF8800orange')
-    // leading text before any code has no span, and appears before the first span
-    expect(html.indexOf('pre ')).toBeGreaterThan(-1)
-    expect(html.indexOf('pre ')).toBeLessThan(html.indexOf('<span'))
+    // leading text before any code has no span, and appears before the first span. Scope the
+    // position check to the <pre> BODY — an unscoped indexOf('pre ') would match the "pre " inside
+    // the "<pre " opening tag, which is trivially before every span (a tautology).
+    const preOpen = '<pre class="bc-notes">'
+    const body = html.slice(html.indexOf(preOpen) + preOpen.length)
+    expect(body.startsWith('pre ')).toBe(true) // the untagged leading run, verbatim
+    expect(body.indexOf('pre ')).toBeLessThan(body.indexOf('<span')) // …ahead of the first colour span
     // palette index 7 → #e8e8e8, with the interior text HTML-escaped
     expect(html).toContain('<span style="color:#e8e8e8">')
     expect(html).toContain('&lt;tag&gt;')

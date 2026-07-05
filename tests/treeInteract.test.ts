@@ -17,9 +17,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { installRenderHarness, type RenderHarness } from './helpers/renderHarness'
 import { attachInteractions, MAX_ZOOM } from '../src/tree/interact'
 import type { InteractCallbacks } from '../src/tree/interact'
+import { fitToBounds, worldToScreen } from '../src/tree/viewport'
 import type { Viewport } from '../src/tree/viewport'
 import { mountTree, buildGraph } from '../src/tree/index'
-import type { RawTreeGraph } from '../src/tree/graph'
+import type { RawTreeGraph, TreeGraph } from '../src/tree/graph'
 import { computeJewelSockets } from '../src/tree/jewelSockets'
 import type { PobBuild } from '../src/convert/types'
 
@@ -326,6 +327,321 @@ describe('mounted tree — real pointer/wheel events over installCanvas2d', () =
     const ev = fire(canvas, 'wheel', 400, 300, { deltaY: -120 })
     flush()
     expect(ev.defaultPrevented).toBe(true)
+  })
+
+  // ── interactive tooltip / mastery picker / touch clusters over the shared engine ──────────────
+  // Fixtures A/B/C live here so they reuse N() + the mount()/fire()/flush() harness above.
+  const CHOICES_A = [
+    { name: 'Bonus One', stats: ['+1 to STR'] },
+    { name: '', stats: ['+2 to DEX'] }, // nameless option → the detail-only choice render (index.ts 650)
+  ]
+  // Fixture A — EDITABLE choices graph: 1—2—3 line; nodes '2' and '3' each carry a "Select a bonus".
+  const choiceRaw = (): RawTreeGraph =>
+    ({
+      bounds: { min_x: 0, min_y: 0, max_x: 200, max_y: 0 },
+      classes: [],
+      nodes: {
+        '1': N(0, 0, 'Alpha'),
+        '2': N(100, 0, 'Beta', { choices: CHOICES_A }),
+        '3': N(200, 0, 'Gamma', {
+          choices: [
+            { name: 'G1', stats: ['+3'] },
+            { name: 'G2', stats: ['+4'] },
+          ],
+        }),
+      },
+      edges: [
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+      ],
+    }) as unknown as RawTreeGraph
+  // Fixture A' — the choices node '2' is disconnected from the seed → its auto-path is unreachable.
+  const choiceIsolatedRaw = (): RawTreeGraph =>
+    ({
+      bounds: { min_x: 0, min_y: 0, max_x: 200, max_y: 0 },
+      classes: [],
+      nodes: {
+        '1': N(0, 0, 'Alpha'),
+        '2': N(100, 0, 'Island', { choices: CHOICES_A }),
+        '3': N(200, 0, 'Gamma'),
+      },
+      edges: [{ from: 1, to: 3 }],
+    }) as unknown as RawTreeGraph
+  // Fixture B — EDITABLE choose-one (mcParent) group: options '3'/'4' share parent '5' (isMultipleChoice).
+  const mcRaw = (): RawTreeGraph =>
+    ({
+      bounds: { min_x: 0, min_y: 0, max_x: 200, max_y: 0 },
+      classes: [],
+      nodes: {
+        '1': N(0, 0, 'Seed'),
+        '5': N(150, 0, 'The Choice', { isMultipleChoice: true }),
+        '3': N(100, 0, 'Opt One', { mcParent: '5' }),
+        '4': N(200, 0, 'Opt Two', { mcParent: '5' }),
+      },
+      edges: [
+        { from: 1, to: 3 },
+        { from: 1, to: 4 },
+      ],
+    }) as unknown as RawTreeGraph
+  // Fixture C — a class-0 stat override so an INFERRED classIndex (setBuild without one) is observable.
+  const overrideRaw = (): RawTreeGraph =>
+    ({
+      bounds: { min_x: 0, min_y: 0, max_x: 200, max_y: 0 },
+      classes: [{ idx: 0, name: 'TestClass', overridePairs: { 3: 900 }, ascendancies: [] }],
+      nodes: {
+        '1': N(0, 0, 'Start', { classStartIndex: [0] }),
+        '2': N(100, 0, 'Mid'),
+        '3': N(200, 0, 'BaseName', { stats: ['base stat'] }),
+      },
+      edges: [
+        { from: 1, to: 2 },
+        { from: 2, to: 3 },
+      ],
+      skillOverrides: {
+        '900': { id: 'ov', skill: 900, name: 'ClassZeroOverride', icon: '', stats: ['overridden stat'] },
+      },
+    }) as unknown as RawTreeGraph
+  // Screen coords of a node at the INITIAL fit viewport (valid before any zoom/pan) — mirrors the mount's
+  // fitViewport (graph.mainBounds + the 0.06·min(w,h) padding), so a pointermove here hit-tests that node.
+  const HIT_SIZE = { width: 800, height: 600 }
+  const screenAt = (g: TreeGraph, id: string): { sx: number; sy: number } => {
+    const node = g.nodeById.get(id)!
+    const vp = fitToBounds(g.mainBounds, HIT_SIZE, 0.06 * Math.min(HIT_SIZE.width, HIT_SIZE.height))
+    return worldToScreen(vp, HIT_SIZE, node.x, node.y)
+  }
+  // ── shared setup helpers (collapse the mount → hover / mount → open-pinned-picker boilerplate) ──
+  type Mounted = ReturnType<typeof mount>
+  /** Build a fixture graph and mount it. */
+  const mountFixture = (rawFn: () => RawTreeGraph, opts: Record<string, unknown> = {}): { graph: TreeGraph; m: Mounted } => {
+    const graph = buildGraph(rawFn())
+    return { graph, m: mount({ graph, ...opts }) }
+  }
+  /** Mount a fixture graph and hover node `id` → its tooltip is showing. Returns the hover coords too. */
+  const mountHover = (
+    rawFn: () => RawTreeGraph,
+    id = '2',
+    opts: Record<string, unknown> = {},
+  ): { graph: TreeGraph; m: Mounted; sx: number; sy: number } => {
+    const { graph, m } = mountFixture(rawFn, opts)
+    const { sx, sy } = screenAt(graph, id)
+    fire(m.canvas, 'pointermove', sx, sy)
+    return { graph, m, sx, sy }
+  }
+  /** Mount a fixture graph and open the PINNED touch picker on node `id` via a touch tap. */
+  const mountPinned = (rawFn: () => RawTreeGraph = choiceRaw, id = '2'): { graph: TreeGraph; m: Mounted } => {
+    const { graph, m } = mountFixture(rawFn)
+    const { sx, sy } = screenAt(graph, id)
+    fire(m.canvas, 'pointerdown', sx, sy, { pointerType: 'touch' })
+    fire(m.canvas, 'pointerup', sx, sy, { pointerType: 'touch' })
+    return { graph, m }
+  }
+  /** Click the numbered choice row `idx` in the currently-shown tooltip. */
+  const clickChoice = (m: Mounted, idx: number): void => {
+    m.tip.querySelector<HTMLElement>(`[data-choice="${idx}"]`)!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+  }
+  it('clicking a choice row in the interactive tooltip auto-paths the mastery and records the pick', () => {
+    const { m } = mountHover(choiceRaw) // hover the "Select a bonus" node → interactive tooltip
+    expect(m.tip.hidden).toBe(false)
+    expect(m.tip.classList.contains('is-interactive')).toBe(true)
+    const btn0 = m.tip.querySelector<HTMLElement>('[data-choice="0"]')!
+    expect(btn0).not.toBeNull()
+    expect(btn0.textContent).toContain('Bonus One') // named option renders <b>name</b>
+    expect(m.tip.querySelector('[data-choice="1"]')!.textContent).toContain('+2 to DEX') // nameless → detail only
+    btn0.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '2'])) // auto-pathed from the seed
+    expect(m.view.getMasteryChoices().get('2')).toBe(0)
+    expect(btn0.getAttribute('aria-pressed')).toBe('true') // mouse-hover in-place reflect (no rebuild)
+    expect(m.changes).toEqual([2]) // fired onChange for the user edit
+  })
+
+  it('re-picking a bonus on an already-allocated mastery updates the pick without a new undo entry', () => {
+    const { m } = mountHover(choiceRaw)
+    clickChoice(m, 0)
+    clickChoice(m, 1) // second pick: node already allocated → the allocate/undo-push branch is skipped
+    expect(m.view.getMasteryChoices().get('2')).toBe(1) // pick swapped in place
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '2'])) // no re-allocation
+    m.view.undo() // exactly ONE undo entry (from the first pick) → straight back to empty
+    expect(m.view.getAllocated().size).toBe(0)
+  })
+
+  it('deallocating one mastery drops only its pick, keeping a still-allocated mastery pick', () => {
+    const { m } = mountFixture(choiceRaw) // both '2' and '3' carry choices
+    m.view.setBuild({
+      allocated: ['1', '2', '3'],
+      masteryChoices: new Map([
+        ['2', 0],
+        ['3', 1],
+      ]),
+    })
+    expect(m.view.getMasteryChoices().size).toBe(2)
+    m.view.toggle('3') // deallocate '3' → pruneChoices drops '3' (gone) but keeps '2' (still allocated)
+    expect(m.view.getAllocated().has('3')).toBe(false)
+    expect(m.view.getMasteryChoices().has('3')).toBe(false)
+    expect(m.view.getMasteryChoices().get('2')).toBe(0) // survivor kept
+  })
+
+  it('a choice click in a viewer-only tree never allocates (pickMasteryChoice viewerOnly guard)', () => {
+    const { m } = mountHover(choiceRaw, '2', { viewerOnly: true })
+    expect(m.tip.hidden).toBe(false)
+    expect(m.tip.classList.contains('is-interactive')).toBe(false) // viewer tip stays click-through
+    clickChoice(m, 0)
+    expect(m.view.getAllocated().size).toBe(0) // the guard short-circuits before allocating
+    expect(m.view.getMasteryChoices().size).toBe(0)
+  })
+
+  it('picking a bonus on an UNREACHABLE mastery is a no-op (allocateNode returns null → bail)', () => {
+    const { m } = mountHover(choiceIsolatedRaw) // node '2' has no edge to the seed
+    clickChoice(m, 0)
+    expect(m.view.getAllocated().size).toBe(0) // could not path to it → nothing allocated
+    expect(m.view.getMasteryChoices().size).toBe(0) // and no pick recorded
+  })
+
+  it('re-hovering the SAME node freezes the tooltip (no markup rebuild)', () => {
+    const { m, sx, sy } = mountHover(choiceRaw)
+    expect(m.tip.hidden).toBe(false)
+    const card = m.tip.firstElementChild as HTMLElement
+    card.setAttribute('data-frozen-marker', '1') // survives only if the 2nd showTooltip early-returns
+    fire(m.canvas, 'pointermove', sx, sy) // identical hover → freeze branch
+    expect((m.tip.firstElementChild as HTMLElement).getAttribute('data-frozen-marker')).toBe('1')
+  })
+
+  it('an interactive tooltip arms a hide timer on leave, cancelled by re-entering the tip', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const { m } = mountHover(choiceRaw) // hover the choices node → interactive tip
+      expect(m.tip.classList.contains('is-interactive')).toBe(true)
+      fire(m.canvas, 'pointermove', 400, 560) // leave onto empty space → arms the hide-bridge timer
+      expect(m.tip.hidden).toBe(false) // NOT hidden immediately (interactive → forgiving delay)
+      m.tip.dispatchEvent(new Event('pointerenter')) // cursor bridged into the tip → cancel the timer
+      vi.advanceTimersByTime(1000)
+      expect(m.tip.hidden).toBe(false) // timer cancelled → tip stays open
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a pointerleave on the tooltip itself hides it (non-pinned mouse tip)', () => {
+    const { m } = mountHover(choiceRaw)
+    expect(m.tip.hidden).toBe(false)
+    m.tip.dispatchEvent(new Event('pointerleave'))
+    expect(m.tip.hidden).toBe(true)
+  })
+
+  it('a TOUCH tap on a chooser opens a pinned picker (no allocation); Close dismisses it', () => {
+    const { m } = mountPinned() // touch tap on a chooser → openPinnedPicker
+    expect(m.tip.hidden).toBe(false)
+    expect(m.tip.classList.contains('is-pinned')).toBe(true)
+    expect(m.tip.querySelector('[data-tip-close]')).not.toBeNull()
+    expect(m.tip.querySelector('[data-tip-remove]')).toBeNull() // not allocated yet → no Remove row
+    expect(m.view.getAllocated().size).toBe(0) // opening the picker must NOT allocate
+    m.tip.querySelector<HTMLElement>('[data-tip-close]')!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(m.tip.hidden).toBe(true)
+  })
+
+  it('picking inside a pinned picker allocates + rebuilds with Remove; Remove deallocates and closes', () => {
+    const { m } = mountPinned()
+    clickChoice(m, 0)
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '2'])) // pick allocates via auto-path
+    expect(m.view.getMasteryChoices().get('2')).toBe(0)
+    const remove = m.tip.querySelector<HTMLElement>('[data-tip-remove]')
+    expect(remove).not.toBeNull() // pinned picker REBUILT now that the node is allocated
+    remove!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+    expect(m.view.getAllocated().has('2')).toBe(false) // Remove deallocated the chooser
+    expect(m.view.getMasteryChoices().has('2')).toBe(false)
+    expect(m.tip.hidden).toBe(true)
+  })
+
+  it('Escape closes a pinned touch picker', () => {
+    const { m } = mountPinned()
+    expect(m.tip.classList.contains('is-pinned')).toBe(true)
+    const wrapper = m.container.querySelector<HTMLElement>('.tree-view')!
+    wrapper.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(m.tip.hidden).toBe(true)
+  })
+
+  it('a pointerdown OUTSIDE a pinned picker dismisses it (touch click-away)', () => {
+    const { m } = mountPinned()
+    expect(m.tip.classList.contains('is-pinned')).toBe(true)
+    // a document-captured pointerdown whose target is outside the tip → onDocPointerDown → hideTip
+    m.canvas.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    expect(m.tip.hidden).toBe(true)
+  })
+
+  it('while a picker is pinned, hovering another node does not disturb it (pinned owns the tip)', () => {
+    const { graph, m } = mountPinned()
+    expect(m.tip.classList.contains('is-pinned')).toBe(true)
+    const p1 = screenAt(graph, '1')
+    fire(m.canvas, 'pointermove', p1.sx, p1.sy) // hover node '1' → onHover, but pinned → ignored
+    expect(m.tip.classList.contains('is-pinned')).toBe(true) // still the pinned picker
+    expect(m.tip.textContent).toContain('Beta') // still node '2's picker, not node '1's (Alpha) tooltip
+  })
+
+  it('a choose-one OPTION tooltip lists its siblings and the "one of N" subline', () => {
+    const { m } = mountHover(mcRaw, '3') // option child (mcParent '5')
+    expect(m.tip.hidden).toBe(false)
+    expect(m.tip.textContent).toContain('one of 2') // optionCount subline
+    const desc = m.tip.querySelector('.itc-desc')!
+    expect(desc.textContent).toContain('— also') // option child uses the "— also" label
+    expect(desc.textContent).toContain('Opt Two') // the sibling '4' name, excluding self
+    expect(desc.textContent).not.toContain('Opt One') // its own name is NOT in the alts list
+  })
+
+  it('a choose-one PARENT tooltip lists every option ("Choose one of: A · B")', () => {
+    const { m } = mountHover(mcRaw, '5') // the isMultipleChoice group parent
+    const desc = m.tip.querySelector('.itc-desc')!
+    expect(desc.textContent).toContain('Choose one of') // parent uses the "of" label
+    expect(desc.textContent).toContain('Opt One')
+    expect(desc.textContent).toContain('Opt Two') // parent lists ALL options
+  })
+
+  it('a choose-one swap is size-neutral yet still recorded as an undoable edit (sameSet by contents)', () => {
+    const { m } = mountFixture(mcRaw)
+    m.view.toggle('3') // allocate option one → {1,3}
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '3']))
+    m.view.toggle('4') // choose the sibling → swaps '3' out for '4' — same SIZE, different contents
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '4']))
+    expect(m.view.canUndo()).toBe(true) // a size-only test would have dropped this from history
+    m.view.undo() // one undo restores the pre-swap set
+    expect(m.view.getAllocated()).toEqual(new Set(['1', '3']))
+  })
+
+  it('a poe2:themechange re-reads the palette and schedules a redraw', () => {
+    const m = mount()
+    flush() // drain the mount's frames so the rAF queue is empty
+    expect(m.container.querySelector('canvas')).not.toBeNull()
+    window.dispatchEvent(new Event('poe2:themechange'))
+    expect(renderHarness.flushRaf()).toBeGreaterThan(0) // onThemeChange → invalidate() queued a frame
+  })
+
+  it('redo() on an empty redo stack returns false', () => {
+    const m = mount()
+    expect(m.view.redo()).toBe(false)
+  })
+
+  it('wires a ResizeObserver on the canvas wrapper when one is available', () => {
+    const observed: Element[] = []
+    class FakeRO {
+      observe(el: Element): void {
+        observed.push(el)
+      }
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal('ResizeObserver', FakeRO)
+    const m = mount()
+    // index.ts observes the .tree-view wrapper (interact.ts separately observes the canvas) — the
+    // wrapper being observed proves the `typeof ResizeObserver !== 'undefined'` branch ran.
+    expect(observed).toContain(m.container.querySelector('.tree-view'))
+  })
+
+  it('setBuild without a classIndex INFERS the class from the allocated start (drives overrides)', () => {
+    const { graph, m } = mountFixture(overrideRaw)
+    m.view.setBuild({ allocated: ['1', '2', '3'] }) // NO classIndex, NO ascendancyId → inferClassIndex → 0
+    const { sx, sy } = screenAt(graph, '3')
+    fire(m.canvas, 'pointermove', sx, sy)
+    // class 0's override for node '3' resolves only if the class was inferred; else the base name shows.
+    expect(m.tip.textContent).toContain('ClassZeroOverride')
+    expect(m.tip.textContent).not.toContain('BaseName')
   })
 })
 

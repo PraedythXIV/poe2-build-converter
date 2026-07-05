@@ -106,4 +106,72 @@ describe('computeLoadouts (faithful PoB SyncLoadouts)', () => {
     })
     expect(computeLoadouts(build)).toEqual([])
   })
+
+  it('treats a brace with no real ids ("{,}") as a plain title, not a link key', () => {
+    // BRACE matches "{,}", but split/trim/filter leaves zero ids → parseBrace returns null → plain title.
+    const build = pob({
+      specs: [spec('Boss {,}')],
+      skillSets: [skills('s', 'Boss {,}')],
+      itemSets: [items('i', 'Boss {,}')],
+      configSets: [config('c', 'x')],
+    })
+    // without the empty-ids guard this would parse as a braced spec with no links → no loadout ([]).
+    expect(computeLoadouts(build)).toEqual([{ name: 'Boss {,}', specIndex: 0, skillSetId: 's', itemSetId: 'i' }])
+  })
+
+  it('a nameless brace ("{1}") names its loadout "Default", and a single item set fans out to it', () => {
+    const build = pob({
+      specs: [spec('{1}')], // no name before the brace → name falls back to "Default"
+      skillSets: [skills('s', 'x')], // oneSkill → skillSetId is skillSets[0].id
+      itemSets: [items('i', 'y')], // oneItem → the brace push takes itemSets[0].id (not byLink.get)
+      configSets: [config('c', 'z')],
+    })
+    // 'Default {1}' proves the name fallback; itemSetId 'i' proves the oneItem branch (byLink.get('1') is undefined).
+    expect(computeLoadouts(build)).toEqual([{ name: 'Default {1}', specIndex: 0, skillSetId: 's', itemSetId: 'i' }])
+  })
+
+  it('a duplicate {id} link across item sets keeps the FIRST match (indexAxis first-wins)', () => {
+    const build = pob({
+      specs: [spec('T {1}')],
+      skillSets: [skills('s1', 'a {1}'), skills('s2', 'b')], // 2 sets → not oneSkill; {1} → s1
+      itemSets: [items('i1', 'g {1}'), items('i2', 'h {1}')], // both link id 1 → first (i1) wins
+      configSets: [config('c', 'x')],
+    })
+    // if the byLink guard let the later set overwrite, itemSetId would be 'i2'.
+    expect(computeLoadouts(build)).toEqual([{ name: 'T {1}', specIndex: 0, skillSetId: 's1', itemSetId: 'i1' }])
+  })
+
+  it('a duplicate plain title across item sets keeps the FIRST match (indexAxis first-wins)', () => {
+    const build = pob({
+      specs: [spec('A')],
+      skillSets: [skills('s1', 'A'), skills('s2', 'other')], // 2 sets → not oneSkill; title "A" → s1
+      itemSets: [items('i1', 'A'), items('i2', 'A')], // duplicate title "A" → first (i1) wins
+      configSets: [config('c', 'x')],
+    })
+    // if the byTitle guard let the later set overwrite, itemSetId would be 'i2'.
+    expect(computeLoadouts(build)).toEqual([{ name: 'A', specIndex: 0, skillSetId: 's1', itemSetId: 'i1' }])
+  })
+
+  it('a braced config set links config existence, letting a brace spec resolve when oneConfig is false', () => {
+    const build = pob({
+      specs: [spec('T {1}')],
+      skillSets: [skills('s1', 'a {1}'), skills('s2', 'b')], // not oneSkill; {1} → s1
+      itemSets: [items('i1', 'g {1}'), items('i2', 'h')], // not oneItem; {1} → i1
+      configSets: [config('c1', 'cfg {1}'), config('c2', 'p')], // 2 sets → not oneConfig; c1 braced → byLink has "1"
+    })
+    // oneConfig is false, so configOk depends on config.byLink.has('1'); if the braced config were not indexed
+    // (byLink empty), configOk would be false and the loadout would vanish ([]).
+    expect(computeLoadouts(build)).toEqual([{ name: 'T {1}', specIndex: 0, skillSetId: 's1', itemSetId: 'i1' }])
+  })
+
+  it('a brace spec whose id resolves on some axes but not all registers no loadout', () => {
+    const build = pob({
+      specs: [spec('X {9}')],
+      skillSets: [skills('s1', 'a {9}'), skills('s2', 'b')], // {9} → s1 (skillOk true), not oneSkill
+      itemSets: [items('i1', 'g {1}'), items('i2', 'h {2}')], // {9} absent (itemOk false), not oneItem
+      configSets: [config('c', 'x')], // oneConfig → configOk true
+    })
+    // itemOk is false, so the && guard skips the push; a broken guard would emit a row with itemSetId undefined.
+    expect(computeLoadouts(build)).toEqual([])
+  })
 })

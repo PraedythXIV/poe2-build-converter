@@ -10,9 +10,9 @@
 // mcGroups) plus the node→mcParent reverse lookup the caller supplies. Ids stay synthetic so a
 // live-tree refresh never touches this file.
 
-import { describe, it, expect } from 'vitest'
-import { allocateNode, deallocateNode } from '../src/tree/interact'
-import type { GateContext, Adjacency } from '../src/tree/interact'
+import { describe, it, expect, vi } from 'vitest'
+import { allocateNode, deallocateNode, shortestPathFromAny, attachInteractions } from '../src/tree/interact'
+import type { GateContext, Adjacency, InteractCallbacks } from '../src/tree/interact'
 
 // ── synthetic fixtures ───────────────────────────────────────────────────────────────────────
 
@@ -227,5 +227,130 @@ describe('multi-prereq gate (permissive by design — AND/OR operator unknown)',
     const allocated = new Set(['S', 'p', 'x'])
     const after = deallocateNode(adj2, allocated, SEEDS, 'p', new Set(), ctx)
     expect(after).toEqual(new Set(['S', 'x'])) // x survives — multi-prereq gate never cascades
+  })
+})
+
+// ── (e) shortestPathFromAny — the three unguarded early edges ───────────────────────────────────
+
+describe('shortestPathFromAny (BFS early-return + empty-adjacency edges)', () => {
+  it('handles a blocked source-target, a source that IS the target, and a source with no adjacency', () => {
+    const adj = adjacency([
+      ['S', 'a'],
+      ['a', 'b'],
+    ])
+    // target is also a source but BLOCKED → null (L75); distinguishes from L76 which would return ['S']
+    expect(shortestPathFromAny(adj, new Set(['S']), 'S', new Set(['S']))).toBeNull()
+    // target already among the sources → trivial single-node path (L76)
+    expect(shortestPathFromAny(adj, new Set(['S']), 'S')).toEqual(['S'])
+    // a source absent from the adjacency map → `?? []` keeps the walk from throwing → null (L83)
+    expect(shortestPathFromAny(new Map([['a', ['b']]]), new Set(['x']), 'zzz')).toBeNull()
+  })
+})
+
+// ── (f) allocateNode — partial-GateContext defensive branches ──────────────────────────────────
+
+describe('allocateNode (partial GateContext)', () => {
+  it('tolerates an mcParent group that has no mcGroups entry (siblings default to [], no throw) (L153)', () => {
+    const adj = adjacency([['S', 't']])
+    // mcParentOf returns a group key, but NO mcGroups map is supplied → `?? []` → nothing to swap
+    const next = allocateNode(adj, new Set(['S']), SEEDS, 't', new Set(), { mcParentOf: () => 'ghost' })!
+    expect(next).toEqual(new Set(['S', 't']))
+  })
+
+  it('rejects a free root whose own single-prereq gate is unsatisfied (L166 `: null`)', () => {
+    const adj = adjacency([['S', 'x']])
+    const ctx: GateContext = { roots: new Set(['R']), unlockGates: new Map([['R', { nodes: ['p'] }]]) }
+    // R is directly allocatable as a root, but its single prereq 'p' is not in the set → refused
+    expect(allocateNode(adj, new Set(), new Set(), 'R', new Set(), ctx)).toBeNull()
+  })
+})
+
+// ── (g) deallocateNode — flood-fill / gate-cascade guards ──────────────────────────────────────
+
+describe('deallocateNode (cascade guard edges)', () => {
+  it('skips a gate dependent that is not currently allocated, sparing a deeper allocated node (L217)', () => {
+    // target gates dep; dep (UNallocated) gates dep2 (allocated). Removing target must not touch dep2:
+    // dep never entered the set, so the cascade skips it. Mutating the `!remaining.has(dep)` guard away
+    // would push dep, then wrongly strip dep2 whose prereq dep is now "absent".
+    const adj = adjacency([
+      ['S', 'target'],
+      ['S', 'dep2'],
+    ])
+    const ctx = gateCtx({ target: ['q'], dep: ['target'], dep2: ['dep'] })
+    const after = deallocateNode(adj, new Set(['S', 'target', 'dep2']), SEEDS, 'target', new Set(), ctx)
+    expect(after.has('dep2')).toBe(true) // survives — dep was never allocated
+    expect(after.has('target')).toBe(false)
+  })
+
+  it('does not treat a seed that is absent from the allocation as a flood root (L231)', () => {
+    // S2 is a seed but never allocated; 'b' hangs off S2 only. Removing 'x' orphans 'b' from the real
+    // seed S, and the unallocated S2 must NOT rescue it (its `remaining.has(s)` check is false).
+    const adj = adjacency([
+      ['S', 'x'],
+      ['x', 'b'],
+      ['S2', 'b'],
+    ])
+    const after = deallocateNode(adj, new Set(['S', 'x', 'b']), new Set(['S', 'S2']), 'x')
+    expect(after).toEqual(new Set(['S'])) // b orphaned, S2 never joins the keep-set
+  })
+})
+
+// ── (h) attachInteractions — pointer/observer edges (a minimal, self-contained harness) ─────────
+
+/** InteractCallbacks fixed at an 800×600 identity viewport; `hit` decides the node under a point and
+ *  `sink` records toggles. Deliberately terse (no state machine) — the render suite owns the rich one. */
+function stubCallbacks(hit: (wx: number, wy: number) => string | null, sink: string[]): InteractCallbacks {
+  return {
+    getViewport: () => ({ x: 0, y: 0, zoom: 1 }),
+    getMinZoom: () => 0.5,
+    getSize: () => ({ width: 800, height: 600 }),
+    setViewport: () => {},
+    nodeAtWorld: hit,
+    onHover: () => {},
+    onToggle: (id) => {
+      sink.push(id)
+    },
+  }
+}
+
+/** Dispatch a synthetic pointer Event carrying the fields the handlers read. */
+function dispatchPtr(el: HTMLElement, type: string, at: { x: number; y: number }, fields: Record<string, unknown> = {}): Event {
+  const ev = new Event(type, { cancelable: true, bubbles: true })
+  Object.assign(ev, { pointerId: 1, button: 0, clientX: at.x, clientY: at.y, ...fields })
+  el.dispatchEvent(ev)
+  return ev
+}
+
+describe('attachInteractions (pointer / observer edges)', () => {
+  it('a clean tap over empty space (no node under the cursor) toggles nothing (L338)', () => {
+    const canvas = document.createElement('div')
+    ;(canvas as unknown as { setPointerCapture(id: number): void }).setPointerCapture = () => {}
+    const toggled: string[] = []
+    const detach = attachInteractions(canvas, stubCallbacks(() => null, toggled))
+    dispatchPtr(canvas, 'pointerdown', { x: 6, y: 6 })
+    dispatchPtr(canvas, 'pointerup', { x: 6, y: 6 }) // no hit → id is null → onToggle never fires
+    expect(toggled).toHaveLength(0)
+    detach()
+  })
+
+  it('observes the canvas via ResizeObserver when one exists, and disconnects on detach (L369)', () => {
+    const observed: HTMLElement[] = []
+    let disconnects = 0
+    class RO {
+      observe(el: HTMLElement): void {
+        observed.push(el)
+      }
+      disconnect(): void {
+        disconnects++
+      }
+      unobserve(): void {}
+    }
+    vi.stubGlobal('ResizeObserver', RO)
+    const canvas = document.createElement('div')
+    const detach = attachInteractions(canvas, stubCallbacks(() => null, []))
+    expect(observed).toEqual([canvas]) // L369 truthy branch → new ResizeObserver(...).observe(canvas)
+    detach()
+    expect(disconnects).toBe(1) // detach() → ro.disconnect()
+    vi.unstubAllGlobals()
   })
 })

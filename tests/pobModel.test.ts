@@ -14,6 +14,25 @@ function doc(inner: string, specAttrs = ''): string {
 }
 
 describe('pob model — Build-level (Increment A)', () => {
+  it('tolerates a build with NO <Build> section — null/empty context, not a throw (missing-Build)', () => {
+    const b = parsePob('<PathOfBuilding2><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""/></Tree></PathOfBuilding2>')
+    expect(b.className).toBeNull()
+    expect(b.level).toBeNull()
+    expect(b.buffs).toBeNull()
+    expect(b.fullDpsSkills).toEqual([])
+    expect(b.timelessData).toBeNull()
+  })
+
+  it('defaults a missing activeSpec to the first spec (1-based → index 0) (activeSpec-default)', () => {
+    const b = parsePob(
+      '<PathOfBuilding2><Build level="92"/><Tree>' +
+        '<Spec treeVersion="0_5" title="A" nodes=""/><Spec treeVersion="0_5" title="B" nodes=""/></Tree></PathOfBuilding2>',
+    )
+    expect(b.specs).toHaveLength(2)
+    expect(b.activeSpecIndex).toBe(0)
+    expect(b.spec.title).toBe('A')
+  })
+
   it('parses Config inputs with their types (boolean/number/string), verbatim', () => {
     const b = parsePob(
       doc(
@@ -58,6 +77,37 @@ describe('pob model — Build-level (Increment A)', () => {
 })
 
 describe('pob model — Spec / Gem (Increments B/C)', () => {
+  it('maps an empty <URL></URL> to null (trim → empty → null) (url-empty)', () => {
+    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><URL></URL></Spec></Tree></PathOfBuilding2>')
+    expect(b.spec.url).toBeNull()
+  })
+
+  it('defaults a socket with no itemId to "0" (empty socket) (socket-itemId)', () => {
+    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec treeVersion="0_5" nodes=""><Sockets><Socket nodeId="100"/></Sockets></Spec></Tree></PathOfBuilding2>')
+    expect(b.spec.sockets).toEqual([{ nodeId: '100', itemId: '0' }])
+  })
+
+  it('defaults a spec with no treeVersion to "unknown" (treeVersion-default)', () => {
+    const b = parsePob('<PathOfBuilding2><Build level="92"/><Tree activeSpec="1"><Spec nodes=""/></Tree></PathOfBuilding2>')
+    expect(b.spec.treeVersion).toBe('unknown')
+  })
+
+  it('defaults a gem with no level/quality to level 1, quality 0 (gem-level-quality)', () => {
+    const b = parsePob(
+      doc('<Skills activeSkillSet="1"><SkillSet id="1"><Skill><Gem gemId="G" skillId="S" nameSpec="T"/></Skill></SkillSet></Skills>'),
+    )
+    const g = b.skillGroups[0]!.gems[0]!
+    expect(g.level).toBe(1)
+    expect(g.quality).toBe(0)
+  })
+
+  it('parses the older export shape — <Skill> directly under <Skills>, no <SkillSet> — id defaults "1" (older-skillset)', () => {
+    const b = parsePob(doc('<Skills><Skill><Gem gemId="G" skillId="S" nameSpec="T"/></Skill></Skills>'))
+    expect(b.skillSets).toHaveLength(1)
+    expect(b.skillSets[0]!.id).toBe('1')
+    expect(b.skillGroups).toHaveLength(1)
+  })
+
   it('parses spec masteryEffects, URL, ascendClassId; tolerates "nil"', () => {
     const b = parsePob(doc('', 'ascendClassId="2" secondaryAscendClassId="nil" masteryEffects="{123,45},{678,9}"'))
     expect(b.spec.ascendClassId).toBe('2')
@@ -103,6 +153,52 @@ describe('pob model — Item body text (Increment D)', () => {
       ),
     )
   }
+
+  it('defaults a slot with no itemId to "0" (empty slot) (slot-itemId)', () => {
+    const b = parsePob(doc('<Items activeItemSet="1"><ItemSet id="1"><Slot name="Body Armour"/></ItemSet></Items>'))
+    expect(b.slots[0]!.itemId).toBe('0')
+  })
+
+  it('drops an <Item> with no id from the shared pool (malformed-item-drop)', () => {
+    const b = parsePob(doc('<Items activeItemSet="1"><Item>Rarity: NORMAL&#10;Foo</Item><ItemSet id="1"/></Items>'))
+    expect(b.items.size).toBe(0)
+  })
+
+  it('keeps an unknown brace prefix like {variant:N} out of tags, text stripped (variant-prefix)', () => {
+    const it = itemWith('Rarity: RARE&#10;X&#10;Vaal Regalia&#10;{variant:1}+5 to Strength', []).items.get('1')!
+    expect(it.parsedMods[0]!.tags).toEqual([])
+    expect(it.parsedMods[0]!.text).toBe('+5 to Strength')
+  })
+
+  it('parses a Grants Skill line with no stated level → level null (grants-skill-no-level)', () => {
+    const it = itemWith('Rarity: UNIQUE&#10;X&#10;Base&#10;Grants Skill: Purity of Ice', []).items.get('1')!
+    expect(it.grantedSkills).toHaveLength(1)
+    expect(it.grantedSkills[0]!.level).toBeNull()
+    expect(it.grantedSkills[0]!.name).toBe('Purity of Ice')
+  })
+
+  it('canonicalises US "Armor:" to the "Armour" defence key (armor-spelling)', () => {
+    const it = itemWith('Rarity: RARE&#10;X&#10;Base&#10;Armor: 500', []).items.get('1')!
+    expect(it.defences['Armour']).toBe('500')
+    expect(it.defences.Armor).toBeUndefined()
+  })
+
+  it('defaults rarity to NORMAL when the body has no Rarity line (no-rarity-line)', () => {
+    const it = itemWith('Foo&#10;Bar&#10;+5 to Strength', []).items.get('1')!
+    expect(it.rarity).toBe('NORMAL')
+    expect(it.name).toBe('Foo Bar')
+  })
+
+  it('handles a RARE item with zero name lines → name/baseType empty (zero-name-lines)', () => {
+    const it = itemWith('Rarity: RARE&#10;Item Level: 84&#10;+5 to Strength', []).items.get('1')!
+    expect(it.name).toBe('')
+    expect(it.baseType).toBe('')
+  })
+
+  it('never overwrites an inline {range:N} with a competing <ModRange> (inline-range-wins)', () => {
+    const it = itemWith('Rarity: RARE&#10;X&#10;Vaal Regalia&#10;{range:0.9}+(80-120) to maximum Life', [[1, '0.1']]).items.get('1')!
+    expect(it.parsedMods[0]!.rangeHint).toBe('0.9')
+  })
 
   it('parses item level/quality/sockets/defences/flags + implicits + per-mod tags + ModRange', () => {
     const body =

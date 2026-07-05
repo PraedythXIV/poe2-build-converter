@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PathOfBuilding2>
+  <Build className="Warrior" mainSocketGroup="1">
+    <PlayerStat stat="TotalDPS" value="100000"/>
+  </Build>
+  <Tree activeSpec="1">
+    <Spec classId="6" treeVersion="0_5" title="Main" nodes="8888888,7777777"/>
+  </Tree>
+  <Skills activeSkillSet="1">
+    <SkillSet id="1" title="Main">
+      <Skill mainActiveSkill="1"><Gem gemId="Metadata/Items/Gems/SkillGemBoneShatter" skillId="Metadata/Items/Gems/SkillGemBoneShatter" nameSpec="Boneshatter" level="20" quality="0"/></Skill>
+    </SkillSet>
+  </Skills>
+  <Items activeItemSet="1">
+    <ItemSet id="1" title="Main"/>
+  </Items>
+  <Config activeConfigSet="1">
+    <ConfigSet id="1" title="Main"/>
+  </Config>
+</PathOfBuilding2>

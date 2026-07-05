@@ -37,6 +37,15 @@ function stubView(allocated: string[]): { view: TreeView; fire: (a: string[]) =>
   return { view, fire: (a) => ((cur = new Set(a)), subs.forEach((fn) => fn(cur))) }
 }
 
+/** Mount a stats panel (fixed single-node view) into a fresh toggle+aside pair; returns both. */
+function mountPanelFixture(): { panel: HTMLElement; toggle: HTMLElement } {
+  document.body.innerHTML = '<button id="t"></button><aside id="p"></aside>'
+  const panel = document.getElementById('p') as HTMLElement
+  const toggle = document.getElementById('t') as HTMLElement
+  mountStatsPanel(panel, toggle, stubView(['A']).view, { A: { stats: ['10% increased Rarity'] } }, { title: 'T', empty: 'E' })
+  return { panel, toggle }
+}
+
 describe('aggregateStats', () => {
   it('sums repeated numeric stats (additive)', () => {
     expect(aggregateStats(['10% increased Rarity', '5% increased Rarity'])).toEqual([
@@ -72,6 +81,13 @@ describe('aggregateStats', () => {
   it('collapses mid-stat newlines and handles decimals', () => {
     expect(aggregateStats(['1.5% increased\nQuantity', '1.5% increased Quantity'])).toEqual([
       { text: '3% increased Quantity', count: 2 },
+    ])
+  })
+
+  it('rounds a floating-point sum to two decimals instead of leaking IEEE-754 error', () => {
+    // 0.1 + 0.2 = 0.30000000000000004; the non-integer format path rounds it back to a clean 0.3
+    expect(aggregateStats(['0.1% increased Quantity', '0.2% increased Quantity'])).toEqual([
+      { text: '0.3% increased Quantity', count: 2 },
     ])
   })
 })
@@ -134,6 +150,25 @@ describe('collectStats — choice node with a REAL base effect (regression: hidd
     }
     expect(collectStats(choiceView(['azmeri'], { azmeri: 1 }), prompt)).toEqual(['Spirit Tempo: Stable'])
   })
+
+  it('tolerates an allocated node with no stats field (defensive ?? [])', () => {
+    // a node object that omits `stats` entirely — collectStats must not crash on `undefined.filter`
+    expect(collectStats(choiceView(['n']), { n: {} })).toEqual([])
+  })
+
+  it('uses the chosen option name alone for a prompt-only chooser that has no node name', () => {
+    const nodes: StatsNodes = {
+      // no `name`, base is a bare "Select …" prompt (dropped), option carries no stats of its own
+      x: {
+        stats: ['Select a bonus'],
+        choices: [
+          { name: 'A', stats: [] },
+          { name: 'B', stats: [] },
+        ],
+      },
+    }
+    expect(collectStats(choiceView(['x'], { x: 1 }), nodes)).toEqual(['B']) // not "undefined: B"
+  })
 })
 
 describe('collectAllocatedStats (live atlas view)', () => {
@@ -157,16 +192,7 @@ describe('collectAllocatedStats (live atlas view)', () => {
 
 describe('mountStatsPanel open/close a11y state', () => {
   it('toggling flips inert + aria-hidden on the panel and aria-expanded on the toggle', () => {
-    document.body.innerHTML = '<button id="t"></button><aside id="p"></aside>'
-    const panel = document.getElementById('p') as HTMLElement
-    const toggle = document.getElementById('t') as HTMLElement
-    mountStatsPanel(
-      panel,
-      toggle,
-      stubView(['A']).view,
-      { A: { stats: ['10% increased Rarity'] } },
-      { title: 'T', empty: 'E' },
-    )
+    const { panel, toggle } = mountPanelFixture()
     toggle.click() // open
     expect(panel.hasAttribute('inert')).toBe(false)
     expect(panel.getAttribute('aria-hidden')).toBe('false')
@@ -175,6 +201,15 @@ describe('mountStatsPanel open/close a11y state', () => {
     expect(panel.hasAttribute('inert')).toBe(true)
     expect(panel.getAttribute('aria-hidden')).toBe('true')
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('Escape on the open panel dismisses it', () => {
+    const { panel, toggle } = mountPanelFixture()
+    toggle.click() // open
+    expect(panel.classList.contains('is-open')).toBe(true)
+    panel.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    expect(panel.classList.contains('is-open')).toBe(false)
+    expect(panel.hasAttribute('inert')).toBe(true)
   })
 })
 

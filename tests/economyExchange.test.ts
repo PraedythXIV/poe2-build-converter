@@ -94,7 +94,9 @@ const PAIRS: ScoutPair[] = [
   {
     Volume: '1000',
     CurrencyOne: { ApiId: 'exalted', Text: 'Exalted Orb' },
-    CurrencyTwo: { ApiId: 'regal', Text: 'Regal Orb' },
+    // apiId carries a token ('sigil') that appears in NO display text — lets the search test prove
+    // the apiId branch of the filter index in isolation from text matching.
+    CurrencyTwo: { ApiId: 'regal-sigil', Text: 'Regal Orb' },
     CurrencyOneData: { VolumeTraded: 8000 },
     CurrencyTwoData: { VolumeTraded: 40 },
   },
@@ -316,7 +318,9 @@ describe('mountExchangeView — search handler', () => {
   })
 
   it('matches on the currency apiId, not just the display text', () => {
-    search('regal') // matches "Regal Orb" + apiId "regal"
+    // 'sigil' lives ONLY in the Regal pair's apiId ('regal-sigil'), never in any display Text, so a
+    // hit can come only from the apiId branch of the search index — text-only matching returns 0.
+    search('sigil')
     expect(pairTexts()).toEqual(['Regal Orb/Exalted Orb'])
   })
 
@@ -435,5 +439,102 @@ describe('mountExchangeView — error state', () => {
     })
     await mountExchangeView(container, LEAGUE)
     expect(container.querySelector('.es-desc')?.textContent).toBe('Could not load the market.')
+  })
+})
+
+// ── coverage top-up: edge branches lcov flagged uncovered (source is read-only; each case is DOM-driven and
+//    mutation-sensitive — the asserted value flips if the guarded line is removed or inverted) ──
+const pair = (o: Partial<ScoutPair>): ScoutPair => ({
+  Volume: '100',
+  CurrencyOne: { ApiId: 'coin', Text: 'Coin' },
+  CurrencyTwo: { ApiId: 'exalted', Text: 'Exalted Orb' },
+  CurrencyOneData: { VolumeTraded: 1 },
+  CurrencyTwoData: { VolumeTraded: 2 },
+  ...o,
+})
+
+describe('mountExchangeView — edge-branch coverage', () => {
+  it('coerces a non-finite pair Volume to 0 through num() (the Number.isFinite fallback)', async () => {
+    happy({ pairs: [pair({ Volume: 'not-a-number' })] })
+    await mountExchangeView(container, LEAGUE)
+    // num('not-a-number') → NaN → fallback 0 → cell "0"; without the fallback formatNumber(NaN) → "—"
+    expect(rowCells(0)[2]!.textContent).toBe('0')
+  })
+
+  it('tolerates a pair currency with no ApiId via the (ApiId ?? "") guards in isBase + the search index', async () => {
+    happy({
+      pairs: [
+        pair({
+          CurrencyOne: { Text: 'Nameless' } as unknown as ScoutPair['CurrencyOne'], // no ApiId
+          CurrencyOneData: { VolumeTraded: 4 },
+          CurrencyTwoData: { VolumeTraded: 8 },
+        }),
+      ],
+    })
+    await mountExchangeView(container, LEAGUE)
+    // apiId-less side reads as non-base (isBase("") → false) → shown first; without ?? "" the .toLowerCase() throws
+    expect(pairTexts()).toEqual(['Nameless/Exalted Orb'])
+    expect(rowCells(0)[1]!.textContent).toBe('1=2') // rate sv/fv = 8/4
+  })
+
+  it('orients a both-base pair with currencyOne higher volume (correct=false) via the default reference set', async () => {
+    happy({
+      refs: [], // empty → the ['exalted','chaos','divine'] default recognises both sides as base
+      pairs: [
+        pair({
+          Volume: '500',
+          CurrencyOne: { ApiId: 'exalted', Text: 'Exalted Orb' },
+          CurrencyTwo: { ApiId: 'divine', Text: 'Divine Orb' },
+          CurrencyOneData: { VolumeTraded: 1000 }, // v1 > v2 → correct=false → the lower-volume side leads
+          CurrencyTwoData: { VolumeTraded: 100 },
+        }),
+      ],
+    })
+    await mountExchangeView(container, LEAGUE)
+    expect(pairTexts()).toEqual(['Divine Orb/Exalted Orb']) // divine (vol 100) first
+    expect(rowCells(0)[1]!.textContent).toBe('1=10') // rate sv/fv = 1000/100
+  })
+
+  it('coalesces rapid search inputs onto a single animation frame (the raf re-entry guard)', async () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => frames.push(cb)) // push returns length (truthy)
+    happy()
+    await mountExchangeView(container, LEAGUE)
+    const el = container.querySelector<HTMLInputElement>('.ex-search')!
+
+    el.value = 'ex'
+    el.dispatchEvent(new Event('input', { bubbles: true })) // schedules frame #1, latches raf
+    el.value = 'exa'
+    el.dispatchEvent(new Event('input', { bubbles: true })) // raf still set → guarded out, no frame #2
+    expect(frames.length).toBe(1) // without the guard the 2nd input would schedule a 2nd frame
+
+    frames[0]!(0) // run the one coalesced frame → a single render at the latest query
+    expect(container.querySelector('#ex-pairs-count')!.textContent).toBe('4 current pairs')
+  })
+
+  it('ignores host clicks that hit neither a sort header nor a pager button (the if(pg) guard)', async () => {
+    happy()
+    await mountExchangeView(container, LEAGUE)
+    const pagerBefore = container.querySelector('.ec-pginfo')!.textContent
+    // a pair cell: closest('[data-sort]') and closest('.ec-pg') are both null → the handler must no-op
+    container.querySelector<HTMLElement>('tbody td')!.click()
+    expect(container.querySelector('.ec-pginfo')!.textContent).toBe(pagerBefore)
+    expect(pairTexts().length).toBe(4) // table untouched, still all four pairs
+  })
+
+  it('renders the chart without NaN when caps are all equal and volumes all 0 (the capRange/volMax || 1 guards)', async () => {
+    happy({
+      history: [
+        { Epoch: 1000, MarketCap: '100', Volume: '0' },
+        { Epoch: 2000, MarketCap: '100', Volume: '0' },
+      ],
+    })
+    await mountExchangeView(container, LEAGUE)
+    const cap = container.querySelector('polyline.ex-cap')
+    expect(cap).not.toBeNull()
+    expect(cap!.getAttribute('points')).not.toContain('NaN') // capRange 0 → || 1 keeps the line finite
+    const rects = [...container.querySelectorAll<SVGRectElement>('.ex-vol rect')]
+    expect(rects.length).toBe(2)
+    expect(rects.some((r) => (r.getAttribute('height') ?? '').includes('NaN'))).toBe(false) // volMax 0 → || 1
   })
 })

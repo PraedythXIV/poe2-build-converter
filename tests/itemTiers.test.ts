@@ -203,6 +203,7 @@ describe('detailsPanel rendering', () => {
     const html = renderItemDetails(rare)
     expect(html).toContain('itc-card')
     expect(html).toContain('idp-chip') // matched life mod got a chip
+    expect(html).toContain('idp-roll') // …and it's a real MATCH (tier + roll range), not a muted unknown
     expect(html).toContain('idp-chip--unknown') // made-up line says "tier ?" instead of guessing
     expect(html).toContain('data-tag="socketed"') // socketed line keeps bonus styling, never a tier chip
     expect(html).not.toMatch(/rune effect[^<]*<span class="idp-chip/)

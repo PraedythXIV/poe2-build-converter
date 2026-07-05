@@ -11,8 +11,9 @@ import { rawNode } from './helpers/graphs'
 
 // Synthetic raw graph (treeGraph.json shape):
 // - Node 1 ("Base Damage") is overridden by class 7 (→ skill 900) and by ascendancy "AscX" (→ skill 901).
-// - Node 2 ("Plain") has no override.
-// - overridePairs reference base 99 too, which is ABSENT from nodes → must be skipped, never throw.
+// - Node 2 ("Plain") pairs to an ABSENT override skill (998) → dropped by the "no second-hop" guard.
+// - overridePairs reference base 99, whose node is ABSENT (but its override 900 DOES exist) → the
+//   missing-base guard must skip it, never add and never throw.
 // - Class 5 ships overridePairs as the empty `[]` array form (GGG's empty shape) → zero overrides.
 // - Ascendancy "AscEmpty" also ships `[]`.
 function overrideRawGraph(): RawTreeGraph {
@@ -22,8 +23,11 @@ function overrideRawGraph(): RawTreeGraph {
       {
         idx: 7,
         name: 'TestClass',
-        // baseNodeId → overrideSkillId; 99 is a missing base (skipped).
-        overridePairs: { 1: 900, 99: 999 },
+        // baseNodeId → overrideSkillId. Two distinct skip paths are exercised on purpose:
+        //   base 2 → 998 : node 2 is real, but 998 has no skillOverrides entry → "no second-hop" skip.
+        //   base 99 → 900: override 900 DOES exist, but node 99 does NOT → missing-base skip.
+        // Only base 1 (real node + real override) survives, so classMap.size === 1.
+        overridePairs: { 1: 900, 2: 998, 99: 900 },
         ascendancies: [
           { id: 'AscX', name: 'Asc X', offsetX: 0, offsetY: 0, overridePairs: { 1: 901 } },
           { id: 'AscEmpty', name: 'Asc Empty', offsetX: 0, offsetY: 0, overridePairs: [] },
@@ -57,7 +61,9 @@ function overrideRawGraph(): RawTreeGraph {
         icon: 'asc.png',
         stats: ['Spells deal 10% increased Damage'],
       },
-      // 999 deliberately ABSENT: even if base 99 existed, there is no second-hop entry to apply.
+      // 900/901 are the only override entries. 998 (base 2's target) is deliberately ABSENT so the
+      // "no second-hop" guard drops base 2; base 99 targets the PRESENT 900, so only its missing NODE
+      // stops it — that isolates the two guards from each other.
     },
   }
   // Cast away the literal type, exactly like graph-gates.test.ts / src/convert/lookups.ts do.
@@ -78,7 +84,8 @@ describe('Phase 3 — skill overrides (synthetic graph)', () => {
       icon: 'class.png',
       stats: ['Minions deal 10% increased Damage'],
     })
-    // missing base 99 was skipped (no throw, no entry); base 2 was never paired
+    // base 99 skipped by the missing-base guard, base 2 by the no-second-hop guard — both now
+    // load-bearing: break either guard and one of these fails (or buildGraph throws at line 68).
     expect(classMap.has('99')).toBe(false)
     expect(classMap.has('2')).toBe(false)
     expect(classMap.size).toBe(1)
@@ -120,11 +127,6 @@ describe('Phase 3 — skill overrides (synthetic graph)', () => {
 
   it('resolveNode — null/null selection is a no-op (returns the base, never an override)', () => {
     expect(resolveNode(graph, base1, null, null)).toBe(base1)
-  })
-
-  it('does not throw when a base id is absent from nodeById (Druid 19680/55194 case)', () => {
-    // building the graph already exercised the missing-base skip for base 99; re-affirm no throw
-    expect(() => buildGraph(overrideRawGraph())).not.toThrow()
   })
 
   it('resolveNode return is assignable as base TreeNode OR SkillOverride (union sanity)', () => {

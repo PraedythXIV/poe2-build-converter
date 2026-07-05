@@ -10,6 +10,36 @@ import { vi } from 'vitest'
 
 const gradient = { addColorStop: () => {} }
 
+/** One recorded 2D-context method call plus a snapshot of the style state at call time. Lets a test
+ *  assert WHICH draw ran (e.g. a fallback dot filled with palette.ws1, a mastery glow drawn at alpha
+ *  0.42) instead of only that draw() executed — the difference between a mutation-sensitive test and a
+ *  "didn't throw" one for the pixel-less render path. Recording is OPT-IN (startCtxRecording) so the
+ *  rest of the suite pays nothing and behaves exactly as before. */
+export interface CtxCall {
+  name: string
+  args: readonly unknown[]
+  fillStyle: unknown
+  strokeStyle: unknown
+  globalAlpha: unknown
+  lineWidth: unknown
+}
+let recording = false
+export const ctxCalls: CtxCall[] = []
+/** Begin capturing ctx method calls (clears any prior log). */
+export function startCtxRecording(): void {
+  recording = true
+  ctxCalls.length = 0
+}
+/** Stop capturing and drop the log — call in afterEach so recording never leaks across tests/files. */
+export function stopCtxRecording(): void {
+  recording = false
+  ctxCalls.length = 0
+}
+/** Empty the log without stopping — use between actions within one test. */
+export function clearCtxCalls(): void {
+  ctxCalls.length = 0
+}
+
 /** A no-op CanvasRenderingContext2D stand-in. Records nothing; every method is a sink, every
  *  property is settable, and the gradient/pattern/measureText factories return usable stubs. */
 export function stub2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
@@ -34,7 +64,23 @@ export function stub2dContext(canvas: HTMLCanvasElement): CanvasRenderingContext
     getImageData: () => ({ data: new Uint8ClampedArray(4), width: 1, height: 1 }),
   }
   return new Proxy(target, {
-    get: (t, p: string) => (p in t ? t[p] : () => {}), // any un-stubbed method → no-op sink
+    get: (t, p) => {
+      if (typeof p !== 'string') return undefined
+      if (p in t) return t[p]
+      // any un-stubbed method → a (optionally recording) no-op sink
+      return (...args: unknown[]): undefined => {
+        if (recording)
+          ctxCalls.push({
+            name: p,
+            args,
+            fillStyle: t.fillStyle,
+            strokeStyle: t.strokeStyle,
+            globalAlpha: t.globalAlpha,
+            lineWidth: t.lineWidth,
+          })
+        return undefined
+      }
+    },
     set: (t, p: string, v) => {
       t[p] = v
       return true

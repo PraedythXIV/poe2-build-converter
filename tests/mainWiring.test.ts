@@ -6,21 +6,8 @@
 // paths NOT already exercised by ui.test.ts (no duplicate coverage).
 
 import { describe, it, expect, beforeAll, vi } from 'vitest'
-import { readFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { copy } from '../src/copy'
-
-const ROOT = process.cwd()
-const SAMPLE_XML = readFileSync(join(ROOT, 'tests', 'fixtures', 'pob2-build.xml'), 'utf8')
-const LOADOUTS_XML = readFileSync(join(ROOT, 'tests', 'fixtures', 'pob-loadouts.xml'), 'utf8')
-
-function bodyInnerHtml(html: string): string {
-  const m = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)
-  const inner = m ? m[1]! : html
-  return inner.replace(/<script[\s\S]*?<\/script>/gi, '') // we import main.ts manually
-}
-
-const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T
+import { SAMPLE_XML, LOADOUTS_XML, byId as $, mountIndexBody } from './helpers/bootHarness'
 
 /** Click one of the input-mode segmented-control buttons (paste | upload | watch). */
 function clickMode(m: 'paste' | 'upload' | 'watch'): void {
@@ -36,10 +23,20 @@ function convertSample(xml: string = SAMPLE_XML): void {
   ;($('convert') as HTMLButtonElement).click()
 }
 
+/** Convert the sample build, open the Variants step, add a second row, and return live row/name accessors. */
+function openVariantsAndAddRow(): { rows: () => NodeListOf<HTMLElement>; names: () => string[] } {
+  convertSample()
+  ;(document.querySelectorAll('#stepper .sx-step')[3] as HTMLElement).click() // Variants step
+  const rows = (): NodeListOf<HTMLElement> => document.querySelectorAll<HTMLElement>('#var-rows .var-row')
+  const names = (): string[] =>
+    [...document.querySelectorAll<HTMLInputElement>('#var-rows .var-name')].map((n) => n.value)
+  ;($('var-add') as HTMLButtonElement).click() // → 2 rows
+  return { rows, names }
+}
+
 describe('main.ts wiring — toggles, routing, input, variants (gaps beyond ui.test.ts)', () => {
   beforeAll(async () => {
-    const html = readFileSync(join(ROOT, 'index.html'), 'utf8')
-    document.body.innerHTML = bodyInnerHtml(html)
+    mountIndexBody()
     // No share hash: boot lands on the default Convert route.
     const main = await import('../src/main')
     await main.enginePrefetch // convert engine is code-split + prefetched — wait until it's ready
@@ -273,15 +270,9 @@ describe('main.ts wiring — toggles, routing, input, variants (gaps beyond ui.t
     expect(steps()[2]!.getAttribute('data-state')).toBe('current')
   })
 
-  // ── Variants step: reorder, selector edits, remove ───────────────────────────
-  it('variant rows reorder, react to selector changes, and remove down to one', () => {
-    convertSample()
-    ;(document.querySelectorAll('#stepper .sx-step')[3] as HTMLElement).click() // Variants step
-    const rows = (): NodeListOf<HTMLElement> => document.querySelectorAll<HTMLElement>('#var-rows .var-row')
-    const names = (): string[] =>
-      [...document.querySelectorAll<HTMLInputElement>('#var-rows .var-name')].map((n) => n.value)
-
-    ;($('var-add') as HTMLButtonElement).click() // → 2 rows
+  // ── Variants step: reorder + remove ──────────────────────────────────────────
+  it('variant rows add, rename, reorder, and remove down to one', () => {
+    const { rows, names } = openVariantsAndAddRow()
     expect(rows().length).toBe(2)
 
     const n0 = rows()[0]!.querySelector<HTMLInputElement>('.var-name')!
@@ -296,18 +287,37 @@ describe('main.ts wiring — toggles, routing, input, variants (gaps beyond ui.t
     rows()[1]!.querySelector<HTMLButtonElement>('.var-up')!.click()
     expect(names()).toEqual(['Beta', 'Alpha'])
 
-    // each selector-change branch (tree / skills / gear) refreshes just that row's preview
-    for (const sel of ['.var-tree', '.var-skills', '.var-gear'] as const) {
-      rows()[0]!
-        .querySelector<HTMLSelectElement>(sel)!
-        .dispatchEvent(new Event('change', { bubbles: true }))
-      expect(rows()[0]!.querySelector('.var-preview')!.textContent).toMatch(/·/)
-    }
-
     // remove the first row (Beta) → back to a single Alpha row
     rows()[0]!.querySelector<HTMLButtonElement>('.var-remove')!.click()
     expect(rows().length).toBe(1)
     expect(names()).toEqual(['Alpha'])
+  })
+
+  // ── Variants step: selector edits rewrite the row's preview from the new selection ──
+  // Uses the 2-loadout fixture so every <select> has a real alternative to switch to — the
+  // single-loadout SAMPLE_XML has one option each, which can only ever re-render the same value.
+  it('a variant row selector edit rewrites its preview from the newly-selected tree/skills/gear', () => {
+    convertSample(LOADOUTS_XML)
+    ;(document.querySelectorAll('#stepper .sx-step')[3] as HTMLElement).click() // Variants step
+    const row0 = (): HTMLElement => document.querySelector<HTMLElement>('#var-rows .var-row')!
+    const preview = (): string => row0().querySelector('.var-preview')!.textContent ?? ''
+
+    // tree spec (3 vs 1 node), skill set, and item set each toggle to their OTHER option; every
+    // change must move the preview, proving the handler reads the new value (not a fixed re-render).
+    for (const cls of ['.var-tree', '.var-skills', '.var-gear'] as const) {
+      const select = row0().querySelector<HTMLSelectElement>(cls)!
+      const other = [...select.options].find((o) => o.value !== select.value)
+      expect(other).toBeDefined()
+      const before = preview()
+      select.value = other!.value
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+      expect(preview()).not.toBe(before)
+    }
+
+    // the preview's skills + gear segments now echo the freshly-selected option labels verbatim
+    const seg = preview().split(' · ')
+    expect(seg[1]).toBe(row0().querySelector<HTMLSelectElement>('.var-skills')!.selectedOptions[0]!.textContent)
+    expect(seg[2]).toBe(row0().querySelector<HTMLSelectElement>('.var-gear')!.selectedOptions[0]!.textContent)
   })
 
   // ── multi-file download (n>1 branch of the download handler) ──────────────────
@@ -345,5 +355,120 @@ describe('main.ts wiring — toggles, routing, input, variants (gaps beyond ui.t
     treeSel.dispatchEvent(new Event('change', { bubbles: true }))
     expect(bcSel.value).toBe('1') // breakdown dropdown followed the tree dropdown
     expect($('bc-stats-note').hidden).toBe(false) // non-main view → the "stats are for main" note shows
+  })
+
+  // ── file upload: acceptFile catch — a File whose .text() rejects ─────────────
+  it('a file whose read rejects surfaces the file-read error and never marks the drop-zone done', async () => {
+    ;($('nav-convert') as HTMLButtonElement).click()
+    clickMode('upload')
+    const dz = $<HTMLButtonElement>('dz')
+    dz.classList.remove('done')
+    const fileInput = $<HTMLInputElement>('file')
+    // a File-shaped stub whose text() rejects drives acceptFile's catch (jsdom's real File.text() resolves)
+    Object.defineProperty(fileInput, 'files', {
+      value: [{ name: 'unreadable.xml', text: () => Promise.reject(new Error('io')) }],
+      configurable: true,
+    })
+    fileInput.dispatchEvent(new Event('change'))
+    await vi.waitFor(() => expect($('dz-txt').textContent).toBe(copy.convert.fileReadError('unreadable.xml')), {
+      timeout: 2000,
+    })
+    expect(dz.classList.contains('done')).toBe(false) // catch cleared any prior .done
+    clickMode('paste')
+  })
+
+  // ── Variants step: move a row DOWN (the twin of the var-up test) ─────────────
+  it('the var-down button moves a variant row down, swapping it with the next', () => {
+    const { rows, names } = openVariantsAndAddRow()
+    const n0 = rows()[0]!.querySelector<HTMLInputElement>('.var-name')!
+    const n1 = rows()[1]!.querySelector<HTMLInputElement>('.var-name')!
+    n0.value = 'First'
+    n0.dispatchEvent(new Event('input', { bubbles: true }))
+    n1.value = 'Second'
+    n1.dispatchEvent(new Event('input', { bubbles: true }))
+    expect(names()).toEqual(['First', 'Second'])
+
+    // row 0's ↓ is enabled (only the LAST row's ↓ is disabled); clicking it swaps rows 0↔1
+    rows()[0]!.querySelector<HTMLButtonElement>('.var-down')!.click()
+    expect(names()).toEqual(['Second', 'First'])
+  })
+
+  // ── segmented control: the (unsupported-browser-hidden) Watch button still switches mode ──
+  // Covers the m==='watch' dispatch (setMode) and currentInput()'s `mode==='watch'` arm: with an
+  // empty watch buffer the preview reads '' — NOT the pasted textarea — so the flow relocks to Import.
+  it('switching to Watch mode reads the (empty) watch buffer, relocking past-Import steps', () => {
+    convertSample() // pastes SAMPLE_XML, parses, lands on the Convert step (4)
+    clickMode('watch')
+    expect($('pane-watch').hidden).toBe(false) // setMode('watch') revealed the Watch pane…
+    expect($('pane-paste').hidden).toBe(true)
+    expect(document.querySelector('#seg button[data-mode="watch"]')!.getAttribute('aria-selected')).toBe('true')
+    // currentInput() returned the empty watch buffer (not els.code.value) → no build → back to Import
+    expect(document.querySelectorAll('#stepper .sx-step')[0]!.getAttribute('data-state')).toBe('current')
+    clickMode('paste') // restore for later tests
+  })
+
+  // ── doConvert optional-field spreads: Name/Author/Description reach the emitted JSON ──
+  it('the optional Name/Author/Description fields are spread into the converted .build', () => {
+    const name = $<HTMLInputElement>('name')
+    const author = $<HTMLInputElement>('author')
+    const description = $<HTMLTextAreaElement>('description')
+    name.value = 'My Build X'
+    author.value = 'Author Y'
+    description.value = 'Desc Z'
+    convertSample() // reads the fields at Convert-click time (values set without 'input' → no reset)
+    const json = $('json').textContent ?? ''
+    expect(json).toContain('"name": "My Build X"') // 454 — name spread
+    expect(json).toContain('"author": "Author Y"') // 455 — author spread
+    expect(json).toContain('"description": "Desc Z"') // 457 — description spread
+    name.value = '' // restore (later tests expect empty metadata)
+    author.value = ''
+    description.value = ''
+  })
+
+  // ── download handler: the per-variant Author/Description spreads reach every emitted file ──
+  it('a two-variant download spreads Author/Description into each downloaded .build', async () => {
+    const author = $<HTMLInputElement>('author')
+    const description = $<HTMLTextAreaElement>('description')
+    author.value = 'DL Author'
+    description.value = 'DL Desc'
+    convertSample()
+    ;(document.querySelectorAll('#stepper .sx-step')[3] as HTMLElement).click() // Variants
+    ;($('var-add') as HTMLButtonElement).click() // → 2 auto-named rows
+    ;(document.querySelectorAll('#stepper .sx-step')[4] as HTMLElement).click() // Convert step
+    const dl = $<HTMLButtonElement>('download')
+    expect(dl.disabled).toBe(false)
+
+    // capture the exact JSON string handed to each Blob (robust regardless of jsdom Blob.text support)
+    const captured: string[] = []
+    const RealBlob = globalThis.Blob
+    class CapturingBlob extends RealBlob {
+      constructor(parts: BlobPart[], opts?: BlobPropertyBag) {
+        super(parts, opts)
+        captured.push(String(parts[0]))
+      }
+    }
+    ;(globalThis as unknown as { Blob: typeof Blob }).Blob = CapturingBlob as unknown as typeof Blob
+    try {
+      dl.click()
+      await vi.waitFor(() => expect(captured.length).toBeGreaterThanOrEqual(2), { timeout: 2000 })
+    } finally {
+      ;(globalThis as unknown as { Blob: typeof Blob }).Blob = RealBlob
+    }
+    expect(captured.every((j) => j.includes('"author": "DL Author"'))).toBe(true) // 640
+    expect(captured.every((j) => j.includes('"description": "DL Desc"'))).toBe(true) // 642
+    author.value = ''
+    description.value = ''
+  })
+
+  // ── stepper keyboard: a non-activation key is ignored (only Enter/Space navigate) ──
+  it('an arrow key on a stepper step is ignored — only Enter/Space activate', () => {
+    convertSample() // lands on Convert (4); every step unlocked
+    const steps = (): Element[] => [...document.querySelectorAll('#stepper .sx-step')]
+    expect(steps()[4]!.getAttribute('data-state')).toBe('current')
+    expect(steps()[1]!.getAttribute('data-state')).toBe('done')
+    steps()[1]!.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+    // the key guard returned early: no navigation happened
+    expect(steps()[1]!.getAttribute('data-state')).toBe('done')
+    expect(steps()[4]!.getAttribute('data-state')).toBe('current')
   })
 })

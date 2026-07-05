@@ -44,6 +44,11 @@ describe('encodeAtlasPlan / decodeAtlasPlan round-trips', () => {
   it('rejects non-numeric ids at encode time (caller bug, not user input)', () => {
     expect(() => encodeAtlasPlan(['AtlasRitualNotable16_'])).toThrow(TypeError)
   })
+
+  it('throws on a numeric id past the safe-integer range (caller bug, not user input)', () => {
+    // all-digits so it clears NUMERIC_ID_RE, but 2^53 + 1 can't be represented exactly
+    expect(() => encodeAtlasPlan(['9007199254740993'])).toThrow(TypeError)
+  })
 })
 
 describe('decodeAtlasPlan garbage tolerance', () => {
@@ -121,9 +126,18 @@ describe('encodeMasteryChoices / decodeMasteryChoices round-trips', () => {
     expect(() => encodeMasteryChoices(new Map([['AtlasBiomeSwampNotable4', 0]]))).toThrow(TypeError)
   })
 
+  it('throws on a mastery node id past the safe-integer range', () => {
+    expect(() => encodeMasteryChoices(new Map([['9007199254740993', 0]]))).toThrow(TypeError)
+  })
+
   it('returns null on garbage instead of throwing', () => {
     expect(decodeMasteryChoices('###')).toBeNull()
     expect(decodeMasteryChoices('A')).toBeNull() // impossible base64 length
     expect(decodeMasteryChoices('gA')).toBeNull() // varint with no terminator / missing index byte
+  })
+
+  it('returns null when a complete varint id has no following option-index byte', () => {
+    // "BQ" decodes to the single byte 0x05: a whole varint id, but the format needs a trailing index byte
+    expect(decodeMasteryChoices('BQ')).toBeNull()
   })
 })

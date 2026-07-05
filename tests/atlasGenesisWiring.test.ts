@@ -18,7 +18,7 @@ import { wireAtlas } from '../src/atlas/wiring'
 import { wireGenesis } from '../src/genesis/wiring'
 import { atlasGraph, atlasRootIds } from '../src/atlas/index'
 import { genesisGraph, genesisRootIds } from '../src/genesis/index'
-import { encodeAtlasPlan } from '../src/atlas/share'
+import { encodeAtlasPlan, encodeMasteryChoices } from '../src/atlas/share'
 import { encodeMasters } from '../src/atlas/mastersShare'
 import { buildGraph } from '../src/tree/index'
 import type { RawTreeGraph, TreeView } from '../src/tree/index'
@@ -44,6 +44,13 @@ const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0))
 
 const captured: TreeView[] = []
 const track = (v: TreeView): TreeView => (captured.push(v), v)
+
+/** Make every localStorage.getItem throw — simulates private-mode / storage-disabled reads. */
+const blockStorageReads = (): void => {
+  vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+    throw new Error('storage blocked')
+  })
+}
 
 beforeEach(() => {
   localStorage.clear()
@@ -123,6 +130,17 @@ function atlasNeighbor(): { neighbor: string; sub: string } {
   const neighbor = String(edge.from === root ? edge.to : edge.from)
   const sub = atlasGraph.nodes[neighbor]!.subTree ?? 'general'
   return { neighbor, sub }
+}
+
+/** Drive a shared "#atlas=" link end-to-end: set the hash, wire, run the boot loader, and resolve the mounted view. */
+async function bootAtlas(hash: string): Promise<AtlasHarness & { view: TreeView }> {
+  window.history.replaceState(null, '', `/${hash}`)
+  const h = makeAtlas()
+  h.wiring.loadBootPlan()
+  await tick()
+  flushRaf()
+  const view = track(await h.wiring.ensureAtlas())
+  return { ...h, view }
 }
 
 describe('wireAtlas — mount, counters, masters drawer', () => {
@@ -258,15 +276,9 @@ describe('wireAtlas — mount, counters, masters drawer', () => {
     const { neighbor } = atlasNeighbor()
     const nodeCode = encodeAtlasPlan([neighbor])
     const mastersCode = encodeMasters({ [MASTERS[0]!.id]: [MASTERS[0]!.keystones[0]!.id] }, MASTERS)
-    window.history.replaceState(null, '', `/#atlas=${nodeCode}.${mastersCode}`)
-
-    const { wiring, els, openAtlasRoute } = makeAtlas()
-    wiring.loadBootPlan()
-    await tick()
-    flushRaf()
+    const { els, openAtlasRoute, view } = await bootAtlas(`#atlas=${nodeCode}.${mastersCode}`)
 
     expect(openAtlasRoute).toHaveBeenCalled() // followed a link → switch to the Atlas route
-    const view = track(await wiring.ensureAtlas())
     expect(view.getAllocated().has(neighbor)).toBe(true) // shared node picks applied (+ the starts)
     expect(els.atlasNote.innerHTML).toBe('') // a readable link supersedes any damaged-link notice
     // the shared master pick was applied + persisted + counted
@@ -291,6 +303,66 @@ describe('wireAtlas — mount, counters, masters drawer', () => {
     track(a)
     expect(a).toBe(b) // same TreeView instance
     expect(els.atlasMount.querySelectorAll('.tree-view').length).toBe(1) // mounted exactly once
+  })
+
+  it('degrades gracefully when localStorage.getItem throws (private mode): bg default on + drawer still mounts', async () => {
+    blockStorageReads()
+    const { wiring, els } = makeAtlas()
+    expect(els.atlasBg.checked).toBe(true) // atlasBgPref() catch → default-on
+    track(await wiring.ensureAtlas()) // loadMastersPref() catch during the masters restore — must not throw
+    expect(document.querySelectorAll('#atlas-masters-drawer .am-cell').length).toBe(12) // mounted despite the errors
+  })
+
+  it('restores last session’s master picks from localStorage on first mount', async () => {
+    const saved = encodeMasters({ [MASTERS[0]!.id]: [MASTERS[0]!.keystones[0]!.id] }, MASTERS)
+    localStorage.setItem('poe2.atlasMasters', saved) // a persisted pick to be decoded + applied
+    const { wiring, els } = makeAtlas()
+    track(await wiring.ensureAtlas())
+    const onChip = els.atlasMastersCounts.querySelector<HTMLElement>('.at-ct.at-ct--on')
+    expect(onChip).not.toBeNull() // the restored pick lit its counter chip
+    expect(onChip!.querySelector('.at-ct-n')!.textContent).toBe('1')
+  })
+
+  it('skips the masters drawer when its host DOM is absent and shares a masters-less link', async () => {
+    const { wiring, els } = makeAtlas()
+    document.getElementById('atlas-masters-toggle')!.remove() // host gone → mastersApi stays null
+    const view = track(await wiring.ensureAtlas())
+    expect(document.querySelectorAll('#atlas-masters-drawer .am-cell').length).toBe(0) // drawer never populated
+    view.toggle(atlasNeighbor().neighbor) // arm Share with a tree-only pick
+    els.atlasShare.click()
+    await tick()
+    expect(location.hash.startsWith('#atlas=')).toBe(true)
+    expect(location.hash.includes('.')).toBe(false) // no ".<mastersCode>" segment — mastersCode was ''
+  })
+
+  it('skips the allocated-stats flyout when its panel host is absent', async () => {
+    const { wiring, els } = makeAtlas()
+    document.getElementById('atlas-stats-panel')!.remove() // optional stats host gone
+    const view = track(await wiring.ensureAtlas())
+    flushRaf()
+    expect(els.atlasMount.querySelector('.tree-view canvas')).not.toBeNull() // tree still mounts
+    expect(document.querySelector('.as-panel')).toBeNull() // no stats panel wired
+    expect(() => view.toggle(atlasNeighbor().neighbor)).not.toThrow() // updates don't reach a null handle
+  })
+
+  it('applies the mastery-choice segment of a boot "#atlas=" link', async () => {
+    const choiceId = Object.keys(atlasGraph.nodes).find(
+      (k) => ((atlasGraph.nodes as Record<string, { choices?: unknown[] }>)[k]!.choices?.length ?? 0) > 0,
+    )!
+    // three "."-segments: nodes . (empty masters) . mastery-choices — exercises the choiceSeg decode branch
+    const hash = `#atlas=${encodeAtlasPlan([choiceId])}..${encodeMasteryChoices(new Map([[choiceId, 0]]))}`
+    const { openAtlasRoute, view } = await bootAtlas(hash)
+    expect(openAtlasRoute).toHaveBeenCalled()
+    expect(view.getMasteryChoices().get(choiceId)).toBe(0) // the shared choice was decoded + applied
+  })
+
+  it('applies shared master picks even when the node segment is corrupt (bad nodes dropped)', async () => {
+    const mastersCode = encodeMasters({ [MASTERS[0]!.id]: [MASTERS[0]!.keystones[0]!.id] }, MASTERS)
+    // "A" is an impossible base64 length → decodeAtlasPlan returns null → atlasBootPlan is null
+    const { els, openAtlasRoute, view } = await bootAtlas(`#atlas=A.${mastersCode}`)
+    expect(openAtlasRoute).toHaveBeenCalled()
+    expect(view.getAllocated().size).toBe(atlasRootIds().length) // only the free starts (corrupt nodes ignored)
+    expect(els.atlasMastersCounts.querySelector('.at-ct.at-ct--on')).not.toBeNull() // shared masters still applied
   })
 })
 
@@ -510,5 +582,30 @@ describe('wireGenesis — mount, counters, share, womb tooltip', () => {
     expect(openGenesisRoute).toHaveBeenCalled()
     expect(els.genesisNote.innerHTML).not.toBe('')
     expect(els.genesisNote.textContent).toContain(copy.share.damagedLink)
+  })
+
+  it('degrades gracefully when localStorage.getItem throws: bg checkbox defaults on at wire time', () => {
+    blockStorageReads()
+    const { els } = makeGenesis()
+    expect(els.genesisBg.checked).toBe(true) // genesisBgPref() catch → default-on
+  })
+
+  it('mounts the genesis tree even when the optional stats-panel host is absent', async () => {
+    const { wiring, els } = makeGenesis()
+    document.getElementById('genesis-stats-panel')!.remove() // optional stats host gone
+    const view = track(await wiring.ensureGenesis())
+    flushRaf()
+    expect(els.genesisMount.querySelector('.tree-view canvas')).not.toBeNull() // tree still mounts
+    expect(document.querySelector('.as-panel')).toBeNull() // no stats panel wired
+    expect(() => view.toggle(genesisNeighbor().neighbor)).not.toThrow()
+  })
+
+  it('reports a genesis clipboard failure with the "Copy failed" label', async () => {
+    const { wiring, els } = makeGenesis(false) // copyText resolves false
+    const view = track(await wiring.ensureGenesis())
+    view.toggle(genesisNeighbor().neighbor)
+    els.genesisShare.click()
+    await tick()
+    expect(els.genesisShare.textContent).toBe(copy.convert.copyFailed)
   })
 })

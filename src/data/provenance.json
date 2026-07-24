@@ -1,14 +1,14 @@
 {
-  "captured": "2026-07-04",
-  "poe2Patch": "4.5.4.3",
+  "captured": "2026-07-24",
+  "poe2Patch": "4.5.4.4.4",
   "schema": {
     "version": 7,
-    "createdAt": "2026-06-27T06:56:26.000Z"
+    "createdAt": "2026-07-22T09:48:46.000Z"
   },
   "sources": {
     "tree": "https://raw.githubusercontent.com/grindinggear/poe2-skilltree-export/1e9eb2d8c1946398c3aaaacfbaead5c75c0d1fa6/data.json",
-    "gems": "own pathofexile-dat extraction (BaseItemTypes + SkillGems @ 4.5.4.3)",
-    "uniques": "own pathofexile-dat extraction (Words, Wordlist 6 @ 4.5.4.3)"
+    "gems": "own pathofexile-dat extraction (BaseItemTypes + SkillGems @ 4.5.4.4.4)",
+    "uniques": "own pathofexile-dat extraction (Words, Wordlist 6 @ 4.5.4.4.4)"
   },
   "counts": {
     "passiveNodes": 4912,

@@ -1,7 +1,7 @@
 {
   "_provenance": {
     "source": "GGG PoE2 game data via pathofexile-dat (AtlasClassPassiveClasses.MasterNormal)",
-    "captured": "2026-07-04",
+    "captured": "2026-09-06",
     "counts": {
       "portraits": 3,
       "decodeMisses": 0
@@ -10,17 +10,17 @@
   },
   "Doryani": {
     "src": "atlas-master-doryani.webp",
-    "w": 158,
+    "w": 160,
     "h": 360
   },
   "Hilda": {
     "src": "atlas-master-hilda.webp",
-    "w": 158,
+    "w": 160,
     "h": 360
   },
   "Jado": {
     "src": "atlas-master-jado.webp",
-    "w": 158,
+    "w": 160,
     "h": 360
   }
 }
